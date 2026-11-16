@@ -1,0 +1,10 @@
+{
+  "stage": "nfr-requirements",
+  "unit": "u1-git-repository",
+  "upstream_ids": [
+    "NFR2"
+  ],
+  "coverage": [
+    { "id": "NFR2", "status": "OK", "target": "tech-stack-decisions.md: no new technology selected" }
+  ]
+}
