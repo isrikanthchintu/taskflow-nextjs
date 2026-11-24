@@ -1,0 +1,24 @@
+{
+  "stage": "code-generation",
+  "unit": "u4-ci-pipeline",
+  "upstream_ids": [
+    "FR4.1",
+    "FR4.2",
+    "FR4.3",
+    "NFR2",
+    "NFR4",
+    "NFR5.1",
+    "NFR5.2",
+    "NFR5.3"
+  ],
+  "coverage": [
+    { "id": "FR4.1", "status": "OK", "target": ".github/workflows/ci.yml" },
+    { "id": "FR4.2", "status": "OK", "target": ".github/workflows/ci.yml" },
+    { "id": "FR4.3", "status": "OK", "target": ".github/workflows/ci.yml" },
+    { "id": "NFR2", "status": "OK", "target": ".github/workflows/ci.yml" },
+    { "id": "NFR4", "status": "OK", "target": ".github/workflows/ci.yml" },
+    { "id": "NFR5.1", "status": "OK", "target": ".github/workflows/ci.yml" },
+    { "id": "NFR5.2", "status": "OK", "target": ".github/workflows/ci.yml" },
+    { "id": "NFR5.3", "status": "OK", "target": ".github/workflows/ci.yml" }
+  ]
+}

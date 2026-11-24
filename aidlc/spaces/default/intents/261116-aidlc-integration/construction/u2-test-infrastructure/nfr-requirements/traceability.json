@@ -1,0 +1,43 @@
+{
+  "stage": "nfr-requirements",
+  "unit": "u2-test-infrastructure",
+  "upstream_ids": [
+    "NFR1",
+    "NFR2",
+    "NFR3"
+  ],
+  "coverage": [
+    {
+      "id": "NFR1",
+      "status": "Deferred",
+      "target": "verified at code-generation by the FR3 test suite passing (storage, hook, and component tests); not an NFR-requirements-stage design artifact"
+    },
+    {
+      "id": "NFR2",
+      "status": "OK",
+      "target": "tech-stack-decisions.md: every added package is a devDependency; NFR5.1 in security-requirements.md restates this at unit level"
+    },
+    {
+      "id": "NFR3",
+      "status": "N/A",
+      "target": "library-kind unit produces no performance-requirements.md (produces_kinds); NFR3 is left qualitative per Assumption A5 and observed at code-generation, not designed here"
+    }
+  ],
+  "reverse": [
+    {
+      "id": "NFR5.1",
+      "status": "N/A",
+      "target": "unit-local security requirement restating inception NFR2; no upstream inception NFR5 exists"
+    },
+    {
+      "id": "NFR5.2",
+      "status": "N/A",
+      "target": "unit-local security requirement; draws on inception NFR4's intent without taking on NFR4 itself (owned by u4-ci-pipeline)"
+    },
+    {
+      "id": "NFR5.3",
+      "status": "N/A",
+      "target": "unit-local security requirement with no inception-level counterpart"
+    }
+  ]
+}

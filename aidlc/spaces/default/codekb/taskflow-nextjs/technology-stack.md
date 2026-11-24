@@ -1,46 +1,54 @@
 # Technology Stack
 
-## Language
+## Languages and Runtime
 
-- **TypeScript** — ^5.7.2 (devDependency), `strict: true` in `tsconfig.json`. All application source files are `.ts`/`.tsx`; `allowJs: false`.
+- TypeScript ^5.7.2, `strict: true`, `allowJs: false`, target ES2017, `moduleResolution: bundler`, `jsx: preserve`, path alias `@/*` -> `./src/*` (`tsconfig.json`).
+- Node.js 20.9 or later (README); CI uses `lts/*`.
+- Browser runtime: React client components; `crypto.randomUUID` and `localStorage`.
 
-## Runtime / Framework
+## Frameworks and Libraries (runtime)
 
-- **Next.js** — ^15.5.0 — React framework providing the App Router, build tooling (`next build`), dev server (`next dev`), and production server (`next start`). `next.config.ts` enables only `reactStrictMode: true`; no other Next.js features (images, redirects, middleware, i18n) are configured.
-- **React** — ^19.1.0 — UI library.
-- **react-dom** — ^19.1.0 — DOM renderer paired with React 19.
+| Package | Range | Purpose |
+|---|---|---|
+| next | ^15.5.0 | App Router framework |
+| react, react-dom | ^19.1.0 | UI |
+| @mui/material | ^9.5.0 | Component library |
+| @mui/icons-material | ^9.5.0 | Icons used in `TaskCard` |
+| @mui/material-nextjs | ^9.5.0 | App Router emotion cache (`v15-appRouter`) |
+| @emotion/react, @emotion/styled | ^11.14.0, ^11.14.1 | MUI styling engine |
+| @dnd-kit/core | ^6.1.0 | Drag and drop primitives |
+| @dnd-kit/sortable | ^8.0.0 | Sortable lists, keyboard coordinates |
+| lucide-react | ^0.468.0 | Icons in dashboard and column |
 
-## UI / Styling
+## Tooling (dev)
 
-- **Tailwind CSS** — ^3.4.17 (devDependency) — configured via `tailwind.config.ts` (`content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"]`, empty theme extension, no plugins) and engaged in `globals.css` via the three `@tailwind` directives. In practice, the component markup does not use Tailwind utility classes inline; the visible styling is the hand-written CSS rules in the same file (see `code-structure.md`).
-- **PostCSS** — ^8.4.49 (devDependency) — processes the Tailwind pipeline, configured in `postcss.config.mjs`.
-- **Autoprefixer** — ^10.6.2 (devDependency) — vendor-prefixing plugin in the PostCSS pipeline.
-- **lucide-react** — ^0.468.0 — icon component library; used extensively throughout `task-dashboard.tsx` (Activity, ArrowDownWideNarrow, CalendarDays, Check, CheckCircle2, Circle, ClipboardList, LayoutDashboard, ListTodo, Plus, Search, Settings2, Trash2, X).
+| Package | Range | Purpose |
+|---|---|---|
+| tailwindcss | ^3.4.17 | Directives in `globals.css` (no utility classes in components) |
+| postcss, autoprefixer | ^8.4.49, ^10.6.2 | CSS pipeline |
+| eslint, eslint-config-next, @eslint/eslintrc | ^9.17.0, ^15.5.0, ^3.3.7 | Linting (flat config via FlatCompat) |
+| prettier | ^3.4.2 | Formatting |
+| jest, jest-environment-jsdom | ^29.7.0 | Tests (via `next/jest`) |
+| @testing-library/react, jest-dom, user-event | ^16.1.0, ^6.6.3, ^14.5.2 | Component testing |
+| @types/jest, node, react, react-dom | ^29.5.14, ^22.10.0, ^19.0.0, ^19.0.0 | Types |
+| ts-node | ^10.9.2 | Loads `jest.config.ts` |
 
-## Tooling
+## Package Manager and Scripts
 
-- **ESLint** — ^9.17.0 (devDependency) — flat config format (`eslint.config.mjs`), extending `next/core-web-vitals` and `next/typescript` via `FlatCompat` from `@eslint/eslintrc` (^3.3.7). Ignores `.next/**` and `node_modules/**`.
-- **eslint-config-next** — ^15.5.0 (devDependency) — supplies the Next.js-recommended lint rule presets consumed above.
-- **TypeScript compiler (`tsc`)** — used in `--noEmit` mode only (type-checking, not emitting JS; Next.js's own bundler handles compilation) via the `pnpm typecheck` script.
-- **@types/node** ^22.10.0, **@types/react** ^19.0.0, **@types/react-dom** ^19.0.0 (devDependencies) — TypeScript type definitions for Node, React, and React DOM APIs.
+pnpm with `pnpm-lock.yaml`. Scripts: `dev`, `build`, `start`, `lint` (`eslint src/`), `typecheck` (`tsc --noEmit`), `test` (`jest`), `format` (`prettier --write .`), `format:check`.
 
-## Package Manager
+## Configuration
 
-- **pnpm** — evidenced by the committed `pnpm-lock.yaml` (125KB lockfile) and the README's explicit `pnpm install`/`pnpm dev` instructions. No `package-lock.json` or `yarn.lock` present.
+- `next.config.ts`: `reactStrictMode: true`.
+- `jest.config.ts`: `next/jest`, `jsdom`, setup file `jest.setup.ts` (jest-dom and `crypto.randomUUID` polyfill), 20 s timeout.
+- `.prettierrc.json`: `tabWidth: 2`, `singleQuote: false`, `trailingComma: "none"`.
+- `eslint.config.mjs`: `next/core-web-vitals`, `next/typescript`; ignores `.next` and `node_modules`.
+- `.env.example`: states no environment variables are required.
 
 ## Persistence
 
-- **Browser `localStorage` (Web Storage API)** — the application's only data store. No database, ORM, or query library of any kind (no Prisma, Drizzle, SQL/NoSQL driver) appears anywhere in the dependency list. See `architecture.md` for the full persistence flow.
+Browser `localStorage` only. No database, ORM, API, or server state.
 
-## Build Output / Artifacts (not scanned as source, confirmed present)
+## Infrastructure
 
-- `.next/` — Next.js build output directory (git-ignored, left unopened per scan rules).
-- `tsconfig.tsbuildinfo` — TypeScript incremental build cache (git-ignored via `*.tsbuildinfo`).
-
-## Explicitly Absent
-
-- No testing framework (Jest, Vitest, Playwright, Cypress, Testing Library, etc.).
-- No state-management library (Redux, Zustand, Jotai, Recoil, React Query/TanStack Query, SWR).
-- No backend framework, ORM, or database driver.
-- No authentication library.
-- No CI/CD tooling configuration (no GitHub Actions, GitLab CI, etc.).
+GitHub Actions CI (`.github/workflows/ci.yml`). No deployment target, container, or IaC.

@@ -1,0 +1,18 @@
+{
+  "stage": "code-generation",
+  "unit": "u1-git-repository",
+  "upstream_ids": [
+    "FR1.1",
+    "FR1.2",
+    "NFR2",
+    "NFR5.1",
+    "NFR5.2"
+  ],
+  "coverage": [
+    { "id": "FR1.1", "status": "OK", "target": ".gitignore" },
+    { "id": "FR1.2", "status": "OK", "target": ".gitignore" },
+    { "id": "NFR2", "status": "OK", "target": ".gitignore" },
+    { "id": "NFR5.1", "status": "OK", "target": ".gitignore" },
+    { "id": "NFR5.2", "status": "OK", "target": ".gitignore" }
+  ]
+}

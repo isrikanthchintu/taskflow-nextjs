@@ -1,0 +1,38 @@
+{
+  "stage": "code-generation",
+  "unit": "u3-code-formatting",
+  "upstream_ids": [
+    "FR5.1",
+    "FR5.2",
+    "NFR2",
+    "NFR5.1",
+    "NFR5.2"
+  ],
+  "coverage": [
+    {
+      "id": "FR5.1",
+      "status": "OK",
+      "target": ".prettierrc.json"
+    },
+    {
+      "id": "FR5.2",
+      "status": "OK",
+      "target": "package.json"
+    },
+    {
+      "id": "NFR2",
+      "status": "OK",
+      "target": "package.json"
+    },
+    {
+      "id": "NFR5.1",
+      "status": "OK",
+      "target": "package.json"
+    },
+    {
+      "id": "NFR5.2",
+      "status": "OK",
+      "target": ".prettierrc.json"
+    }
+  ]
+}

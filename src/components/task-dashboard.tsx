@@ -1,182 +1,454 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { Box, Button, Stack, Typography } from "@mui/material";
+import { LayoutDashboard } from "lucide-react";
+import { BannerStack } from "@/components/banner-stack";
+import { BoardsMenu } from "@/components/boards-menu";
+import { CardDialog } from "@/components/card-dialog";
+import { CommandMenu, type Command } from "@/components/command-menu";
 import {
-  Activity, ArrowDownWideNarrow, CalendarDays, Check, CheckCircle2, Circle,
-  ClipboardList, LayoutDashboard, ListTodo, Plus, Search, Settings2, Trash2,
-  X
-} from "lucide-react";
-import { useTasks } from "@/hooks/use-tasks";
-import type { Task, TaskPriority, TaskStatus } from "@/types/task";
+  EMPTY_VIEW,
+  FilterPanel,
+  viewActiveCount,
+  type BoardView
+} from "@/components/filter-panel";
+import {
+  ImportExportDialog,
+  type ImportExportHandle
+} from "@/components/import-export-dialog";
+import { KanbanBoard } from "@/components/kanban-board";
+import { RulesDialog } from "@/components/rules-dialog";
+import { ShortcutHelp } from "@/components/shortcut-help";
+import { SwimlaneView } from "@/components/swimlane-view";
+import { TopBar } from "@/components/top-bar";
+import { UndoSnackbar } from "@/components/undo-snackbar";
+import { useBoard } from "@/hooks/use-board";
+import { useHotkeys } from "@/hooks/use-hotkeys";
+import { checkLimits } from "@/lib/board-ops";
+import {
+  activeCards,
+  activeLists,
+  filterCards,
+  listCounts
+} from "@/lib/board-query";
+import { getBackground } from "@/lib/theme-presets";
+import type { Card } from "@/types/board";
 
-type Filter = "all" | TaskStatus;
+interface DialogState {
+  open: boolean;
+  card: Card | null;
+  listId: string;
+}
 
-const statusLabels: Record<TaskStatus, string> = {
-  todo: "To do",
-  "in-progress": "In progress",
-  done: "Completed"
-};
+const visuallyHidden = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap"
+} as const;
 
-function formatDate(date: string) {
-  if (!date) return "No due date";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(`${date}T00:00:00`));
+function openLink(testId: string, fallbackPath: string) {
+  const link = document.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
+  if (link) link.click();
+  else window.location.assign(fallbackPath);
 }
 
 export function TaskDashboard() {
-  const { tasks, isReady, addTask, deleteTask, setStatus } = useTasks();
-  const [filter, setFilter] = useState<Filter>("all");
+  const {
+    data,
+    board,
+    isReady,
+    dataError,
+    saveError,
+    notice,
+    undoEntry,
+    undo,
+    dismissNotice,
+    dismissSaveError
+  } = useBoard();
   const [query, setQuery] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<TaskPriority>("medium");
-  const [dueDate, setDueDate] = useState("");
+  const [view, setView] = useState<BoardView>(EMPTY_VIEW);
+  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const [boardsAnchor, setBoardsAnchor] = useState<HTMLElement | null>(null);
+  const [commandsOpen, setCommandsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>({
+    open: false,
+    card: null,
+    listId: ""
+  });
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const boardsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const transferRef = useRef<ImportExportHandle>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
 
-  const filteredTasks = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return tasks.filter((task) => {
-      const matchesFilter = filter === "all" || task.status === filter;
-      const matchesQuery = !normalizedQuery ||
-        task.title.toLowerCase().includes(normalizedQuery) ||
-        task.description.toLowerCase().includes(normalizedQuery);
-      return matchesFilter && matchesQuery;
-    });
-  }, [tasks, filter, query]);
+  const lists = useMemo(() => activeLists(board), [board]);
+  const counts = useMemo(() => listCounts(board), [board]);
+  const limits = useMemo(() => checkLimits(data), [data]);
+  const fullView = useMemo<BoardView>(
+    () => ({ ...view, filter: { ...view.filter, text: query } }),
+    [view, query]
+  );
+  const matchCount = useMemo(
+    () => filterCards(activeCards(board), fullView.filter, lists).length,
+    [board, fullView, lists]
+  );
+  const background = getBackground(board.backgroundId);
+  const canAdd = !dataError && lists.length > 0;
+  const filtering = viewActiveCount(view) > 0 || query.trim() !== "";
 
-  const counts = useMemo(() => ({
-    all: tasks.length,
-    todo: tasks.filter((task) => task.status === "todo").length,
-    active: tasks.filter((task) => task.status === "in-progress").length,
-    done: tasks.filter((task) => task.status === "done").length
-  }), [tasks]);
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const cleanTitle = title.trim();
-    if (!cleanTitle) return;
-    addTask({ title: cleanTitle, description: description.trim(), priority, dueDate });
-    setTitle("");
-    setDescription("");
-    setPriority("medium");
-    setDueDate("");
-    setShowForm(false);
+  function openCreate(listId?: string) {
+    const target = listId ?? lists[0]?.id;
+    if (!target) return;
+    setDialog({ open: true, card: null, listId: target });
   }
 
+  function openEdit(card: Card) {
+    setDialog({ open: true, card, listId: card.listId });
+  }
+
+  function closeDialog() {
+    setDialog((current) => ({ ...current, open: false }));
+  }
+
+  function restoreFocusIfLost() {
+    setTimeout(() => {
+      if (document.activeElement === document.body) mainRef.current?.focus();
+    }, 0);
+  }
+
+  function newList() {
+    document
+      .querySelector<HTMLElement>('[data-testid="add-list-tile"]')
+      ?.click();
+  }
+
+  function focusSearch() {
+    searchRef.current?.focus();
+  }
+
+  function openBoardsMenu() {
+    const button = boardsButtonRef.current;
+    if (!button) return;
+    button.focus();
+    setBoardsAnchor(button);
+  }
+
+  function toggleFilters() {
+    if (filterAnchor) {
+      setFilterAnchor(null);
+      return;
+    }
+    const button = document.querySelector<HTMLElement>(
+      '[data-testid="top-bar-filter"], [data-testid="top-bar-menu-button"]'
+    );
+    if (button) setFilterAnchor(button);
+  }
+
+  const commands: Command[] = [
+    {
+      id: "new-card",
+      label: "New card",
+      shortcut: "N",
+      disabled: !canAdd,
+      run: () => openCreate()
+    },
+    { id: "new-list", label: "New list", shortcut: "L", run: newList },
+    {
+      id: "focus-search",
+      label: "Go to search",
+      shortcut: "/",
+      run: focusSearch
+    },
+    {
+      id: "switch-board",
+      label: "Switch board",
+      shortcut: "B",
+      run: openBoardsMenu
+    },
+    {
+      id: "open-settings",
+      label: "Open settings",
+      run: () => openLink("top-bar-settings", "/settings")
+    },
+    {
+      id: "open-archive",
+      label: "Open archive",
+      run: () => openLink("archive-link", "/archive")
+    },
+    { id: "toggle-filters", label: "Toggle filters panel", run: toggleFilters },
+    {
+      id: "export-board",
+      label: "Export this board",
+      run: () => transferRef.current?.exportBoard()
+    },
+    {
+      id: "import-board",
+      label: "Import a board",
+      run: () => transferRef.current?.startImport()
+    },
+    {
+      id: "open-rules",
+      label: "Open rules for this board",
+      run: () => setRulesOpen(true)
+    },
+    {
+      id: "keyboard-shortcuts",
+      label: "Show keyboard shortcuts",
+      shortcut: "?",
+      run: () => setHelpOpen(true)
+    }
+  ];
+
+  useHotkeys(
+    {
+      n: canAdd ? () => openCreate() : undefined,
+      l: newList,
+      "/": focusSearch,
+      b: openBoardsMenu,
+      "?": () => setHelpOpen(true),
+      "mod+k": () => setCommandsOpen(true)
+    },
+    isReady
+  );
+
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="#" aria-label="TaskFlow home">
-          <span className="brand-mark"><Check size={19} strokeWidth={3} /></span>
-          <span>taskflow</span>
-        </a>
-        <div className="workspace-label">WORKSPACE</div>
-        <nav className="nav-list" aria-label="Main navigation">
-          <a className="nav-item active" href="#"><LayoutDashboard size={18} /> Overview</a>
-          <a className="nav-item" href="#tasks"><ListTodo size={18} /> My tasks <span className="nav-count">{counts.all}</span></a>
-          <a className="nav-item" href="#activity"><Activity size={18} /> Activity</a>
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="sidebar-tip">
-            <div className="tip-icon"><ClipboardList size={18} /></div>
-            <strong>Small steps, big progress.</strong>
-            <p>Keep your focus on what matters today.</p>
-          </div>
-          <a className="nav-item muted" href="#settings"><Settings2 size={18} /> Settings</a>
-          <div className="profile">
-            <div className="avatar">JD</div>
-            <div><strong>Jordan Davis</strong><span>Personal workspace</span></div>
-            <span className="profile-dots">···</span>
-          </div>
-        </div>
-      </aside>
+    <Box
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        background: background.css,
+        color: background.textColor,
+        overflow: "hidden"
+      }}
+    >
+      <Box
+        component="a"
+        href="#board-main"
+        data-testid="skip-link"
+        onClick={(event: React.MouseEvent) => {
+          event.preventDefault();
+          mainRef.current?.focus();
+        }}
+        sx={{
+          ...visuallyHidden,
+          "&:focus": {
+            position: "fixed",
+            top: 8,
+            left: 8,
+            zIndex: 2000,
+            width: "auto",
+            height: "auto",
+            clip: "auto",
+            p: 1.5,
+            bgcolor: "#fff",
+            color: "#172b4d",
+            fontWeight: 700,
+            borderRadius: 1,
+            outline: "2px solid #0c66e4"
+          }
+        }}
+      >
+        Skip to board
+      </Box>
 
-      <section className="main-content">
-        <header className="topbar">
-          <div className="breadcrumb">Workspace <span>/</span> <strong>Overview</strong></div>
-          <div className="topbar-right"><span className="today-label"><CalendarDays size={15} /> Monday, November 16</span><div className="avatar small">JD</div></div>
-        </header>
+      <TopBar
+        boardName={board.name}
+        query={query}
+        onQueryChange={setQuery}
+        activeFilterCount={viewActiveCount(view)}
+        onOpenFilters={setFilterAnchor}
+        onNewTask={() => openCreate()}
+        newTaskDisabled={!canAdd}
+        searchInputRef={searchRef}
+        onOpenCommands={() => setCommandsOpen(true)}
+        boardsMenu={
+          <BoardsMenu
+            anchorEl={boardsAnchor}
+            onOpen={setBoardsAnchor}
+            onClose={() => setBoardsAnchor(null)}
+            buttonRef={boardsButtonRef}
+            onExport={() => transferRef.current?.exportBoard()}
+            onImport={() => transferRef.current?.startImport()}
+            onOpenRules={() => setRulesOpen(true)}
+          />
+        }
+      />
 
-        <div className="page-content">
-          <section className="welcome-row">
-            <div>
-              <p className="eyebrow">YOUR PERSONAL WORKSPACE</p>
-              <h1>Good morning, Jordan <span>✦</span></h1>
-              <p className="subtitle">Here&apos;s what&apos;s happening with your tasks today.</p>
-            </div>
-            <button className="primary-button" onClick={() => setShowForm(true)}><Plus size={18} /> New task</button>
-          </section>
+      <BannerStack
+        dataError={dataError}
+        saveError={saveError}
+        notice={notice}
+        limits={limits}
+        onDismissSaveError={dismissSaveError}
+        onDismissNotice={dismissNotice}
+      />
 
-          <section className="stats-grid" aria-label="Task summary">
-            <StatCard label="Total tasks" value={counts.all} helper="Across your workspace" icon={<ClipboardList size={18} />} tone="violet" />
-            <StatCard label="To do" value={counts.todo} helper="Waiting to get started" icon={<Circle size={18} />} tone="blue" />
-            <StatCard label="In progress" value={counts.active} helper="Currently being worked on" icon={<Activity size={18} />} tone="orange" />
-            <StatCard label="Completed" value={counts.done} helper="Great work so far" icon={<CheckCircle2 size={18} />} tone="green" />
-          </section>
+      <Box
+        component="main"
+        id="board-main"
+        tabIndex={-1}
+        ref={mainRef}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          outline: "none"
+        }}
+      >
+        <Stack
+          direction="row"
+          sx={{
+            flexShrink: 0,
+            alignItems: "center",
+            justifyContent: "space-between",
+            px: 2.5,
+            py: 1.5,
+            flexWrap: "wrap",
+            gap: 1
+          }}
+        >
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
+            <LayoutDashboard size={20} aria-hidden="true" />
+            <Typography component="h1" sx={{ fontSize: 20, fontWeight: 700 }}>
+              {board.name}
+            </Typography>
+            <Button
+              component={Link}
+              href="/archive"
+              size="small"
+              data-testid="archive-link"
+              sx={{
+                color: "#fff",
+                bgcolor: "rgba(0,0,0,.32)",
+                "&:hover": { bgcolor: "rgba(0,0,0,.45)", transform: "none" }
+              }}
+            >
+              Archive
+            </Button>
+          </Stack>
 
-          <section className="tasks-panel" id="tasks">
-            <div className="panel-heading">
-              <div><h2>Your tasks</h2><p>Manage and prioritize your work.</p></div>
-              <div className="task-tools">
-                <label className="search-box"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tasks..." aria-label="Search tasks" /></label>
-                <button className="icon-button" title="Sort tasks by due date" onClick={() => setFilter("all")}><ArrowDownWideNarrow size={17} /></button>
-              </div>
-            </div>
-            <div className="filter-tabs" role="tablist" aria-label="Filter tasks">
-              {(["all", "todo", "in-progress", "done"] as Filter[]).map((item) => (
-                <button key={item} role="tab" aria-selected={filter === item} className={`filter-tab ${filter === item ? "selected" : ""}`} onClick={() => setFilter(item)}>
-                  {item === "all" ? "All tasks" : statusLabels[item]}
-                  <span>{item === "all" ? counts.all : item === "todo" ? counts.todo : item === "in-progress" ? counts.active : counts.done}</span>
-                </button>
-              ))}
-            </div>
+          <Box
+            component="section"
+            role="region"
+            aria-label="Task summary"
+            sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}
+          >
+            <StatPill label="Total tasks" value={counts.total} />
+            {counts.perList.map((entry) => (
+              <StatPill
+                key={entry.listId}
+                label={entry.name}
+                value={entry.count}
+                testId={`count-pill-${entry.listId}`}
+              />
+            ))}
+          </Box>
+        </Stack>
 
-            {!isReady ? <div className="empty-state">Loading your tasks...</div> : filteredTasks.length === 0 ? (
-              <div className="empty-state"><div className="empty-icon"><ListTodo size={22} /></div><strong>No tasks found</strong><p>Try another search or create a new task.</p><button className="text-button" onClick={() => setShowForm(true)}>Create a task</button></div>
-            ) : (
-              <div className="task-list">
-                {filteredTasks.map((task) => <TaskRow key={task.id} task={task} onStatusChange={setStatus} onDelete={deleteTask} />)}
-              </div>
-            )}
-            <div className="panel-footer"><span>Showing {filteredTasks.length} of {tasks.length} tasks</span><span>Saved automatically on this device</span></div>
-          </section>
-          <footer className="page-footer">Made for focused work <span>·</span> TaskFlow demo</footer>
-        </div>
-      </section>
+        <Box
+          role="status"
+          aria-live="polite"
+          data-testid="match-live-region"
+          sx={visuallyHidden}
+        >
+          {filtering && !filterAnchor
+            ? `${matchCount} ${matchCount === 1 ? "card matches" : "cards match"}`
+            : ""}
+        </Box>
 
-      {showForm && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowForm(false); }}>
-          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div className="modal-header"><div><p className="eyebrow">MAKE IT HAPPEN</p><h2 id="modal-title">Create a new task</h2></div><button className="icon-button" onClick={() => setShowForm(false)} aria-label="Close dialog"><X size={18} /></button></div>
-            <form onSubmit={handleSubmit}>
-              <label className="field-label">Task name <span>*</span><input autoFocus required maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Prepare project proposal" /></label>
-              <label className="field-label">Description <textarea rows={3} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Add a few details (optional)" /></label>
-              <div className="form-row">
-                <label className="field-label">Priority<select value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
-                <label className="field-label">Due date<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
-              </div>
-              <div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Cancel</button><button type="submit" className="primary-button"><Plus size={17} /> Create task</button></div>
-            </form>
-          </section>
-        </div>
-      )}
-    </main>
+        {!isReady ? (
+          <Typography sx={{ color: "#eaf4fb", textAlign: "center", py: 6 }}>
+            Loading your tasks...
+          </Typography>
+        ) : fullView.swimlane ? (
+          <SwimlaneView board={board} view={fullView} onEditTask={openEdit} />
+        ) : (
+          <KanbanBoard
+            board={board}
+            view={fullView}
+            disabled={Boolean(dataError)}
+            onEditTask={openEdit}
+            onAddCard={canAdd ? openCreate : undefined}
+          />
+        )}
+      </Box>
+
+      <FilterPanel
+        anchorEl={filterAnchor}
+        onClose={() => setFilterAnchor(null)}
+        labels={board.labels}
+        view={view}
+        onChange={setView}
+        matchCount={matchCount}
+      />
+
+      <CardDialog
+        open={dialog.open}
+        card={dialog.card}
+        listId={dialog.listId}
+        onClose={closeDialog}
+        onExited={restoreFocusIfLost}
+      />
+
+      <CommandMenu
+        open={commandsOpen}
+        onClose={() => setCommandsOpen(false)}
+        commands={commands}
+      />
+      <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <RulesDialog
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        onExited={() => boardsButtonRef.current?.focus()}
+      />
+      <ImportExportDialog ref={transferRef} />
+
+      <UndoSnackbar entry={undoEntry} onUndo={undo} />
+    </Box>
   );
 }
 
-function StatCard({ label, value, helper, icon, tone }: { label: string; value: number; helper: string; icon: React.ReactNode; tone: string }) {
-  return <article className="stat-card"><div className={`stat-icon ${tone}`}>{icon}</div><p>{label}</p><div className="stat-value">{value}</div><span>{helper}</span></article>;
-}
-
-function TaskRow({ task, onStatusChange, onDelete }: { task: Task; onStatusChange: (id: string, status: TaskStatus) => void; onDelete: (id: string) => void }) {
-  const nextStatus: Record<TaskStatus, TaskStatus> = { todo: "in-progress", "in-progress": "done", done: "todo" };
+function StatPill({
+  label,
+  value,
+  testId
+}: {
+  label: string;
+  value: number;
+  testId?: string;
+}) {
   return (
-    <article className="task-row">
-      <button className={`task-check ${task.status === "done" ? "checked" : ""}`} aria-label={`Mark ${task.title} as ${statusLabels[nextStatus[task.status]]}`} onClick={() => onStatusChange(task.id, nextStatus[task.status])}>{task.status === "done" && <Check size={13} />}</button>
-      <div className="task-main"><strong className={task.status === "done" ? "completed-title" : ""}>{task.title}</strong><p>{task.description || "No description added"}</p></div>
-      <span className={`priority-badge ${task.priority}`}>{task.priority}</span>
-      <span className={`status-badge ${task.status}`}>{statusLabels[task.status]}</span>
-      <span className="due-date"><CalendarDays size={14} />{formatDate(task.dueDate)}</span>
-      <button className="delete-button" onClick={() => onDelete(task.id)} aria-label={`Delete ${task.title}`}><Trash2 size={16} /></button>
-    </article>
+    <Box
+      data-testid={testId ?? "count-pill-total"}
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 1,
+        bgcolor: "rgba(0,0,0,.32)",
+        color: "#fff",
+        borderRadius: 1.5,
+        px: 1.5,
+        height: 30
+      }}
+    >
+      <Typography component="span" sx={{ fontSize: 13 }}>
+        {label}
+      </Typography>
+      <Typography
+        component="span"
+        data-testid="count-pill-value"
+        sx={{ fontSize: 13, fontWeight: 800 }}
+      >
+        {value}
+      </Typography>
+    </Box>
   );
 }

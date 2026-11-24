@@ -1,0 +1,20 @@
+{
+  "stage": "nfr-design",
+  "unit": "u3-code-formatting",
+  "upstream_ids": [
+    "NFR5.1",
+    "NFR5.2"
+  ],
+  "coverage": [
+    {
+      "id": "NFR5.1",
+      "status": "OK",
+      "target": "security-design.md: devDependencies-only placement rule"
+    },
+    {
+      "id": "NFR5.2",
+      "status": "OK",
+      "target": "security-design.md: plugin-free Prettier configuration"
+    }
+  ]
+}

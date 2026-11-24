@@ -1,0 +1,14 @@
+{
+  "stage": "nfr-requirements",
+  "unit": "u3-code-formatting",
+  "upstream_ids": [
+    "NFR2"
+  ],
+  "coverage": [
+    {
+      "id": "NFR2",
+      "status": "OK",
+      "target": "tech-stack-decisions.md: prettier added as a devDependency only"
+    }
+  ]
+}

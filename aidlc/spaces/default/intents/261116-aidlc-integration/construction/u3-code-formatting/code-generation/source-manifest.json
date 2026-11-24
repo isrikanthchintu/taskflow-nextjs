@@ -1,0 +1,10 @@
+{
+  "stage": "code-generation",
+  "unit": "u3-code-formatting",
+  "version": 1,
+  "writes": [
+    { "path": "package.json" },
+    { "path": ".prettierrc.json" },
+    { "path": ".prettierignore" }
+  ]
+}

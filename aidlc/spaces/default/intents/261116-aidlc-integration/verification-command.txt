@@ -1,1 +1,1 @@
-pnpm lint && pnpm typecheck
+npx eslint src/ && pnpm typecheck

@@ -1,51 +1,53 @@
 # Code Quality Assessment
 
-## Test Coverage
+## Quick Ratings
 
-- **Status**: None. No test directories, no test files (`*.test.ts(x)`, `*.spec.ts(x)`), no test runner configured, and no `test` script in `package.json`.
-- **Frameworks**: None present in dependencies (no Jest, Vitest, Playwright, Cypress, React Testing Library).
-- **Coverage tooling**: None configured.
-- **Assessment**: This is the single largest quality gap in the codebase. The README itself lists "Add unit and component tests" as the second "Next development step," confirming this is a known, acknowledged gap rather than an oversight to be newly discovered.
+| Dimension | Rating | Note |
+|---|---|---|
+| Naming clarity | good | Descriptive, consistent kebab/Pascal/camel conventions |
+| Function size | fair | `TaskDashboard` is about 400 lines; board logic is split into small pure helpers |
+| Error handling | fair | Storage read/write guarded; read does not validate items; write failure only logs |
+| Test presence | good | Every source module except layout, page, theme has a test |
+| Duplication | fair | Status label map duplicated in `kanban-board.tsx` and `task-card.tsx` |
+| Dead code | poor | Large unused legacy block in `globals.css` |
 
-## Linting
+## Testing
 
-- **Tool**: ESLint 9, flat config (`eslint.config.mjs`), extending `next/core-web-vitals` and `next/typescript` through `FlatCompat`.
-- **Scope**: Applies to the whole project except `.next/**` and `node_modules/**`.
-- **Script**: `pnpm lint` (`eslint .`).
-- **Assessment**: Standard, reasonably strict Next.js defaults are in place. No lint-disable comments (`// eslint-disable`) were found anywhere in the 7 source files, suggesting the current code is written to comply with (or was never checked against) these rules — no way to confirm pass/fail without executing the linter, which this static scan does not do.
+- Jest 29 with jsdom, React Testing Library, user-event; `next/jest` transform.
+- 6 co-located test files, 41 cases: board 10 (rendering and `resolveDragOutcome`), column 4, card 6, dashboard 7, hook 9, storage 5.
+- Storage tests cover round trip, empty, malformed JSON, and the no-`window` SSR path; hook tests cover seeding, load, add, status, delete, move, reorder, and write-back.
+- No coverage configuration or thresholds (team posture: no coverage floor; tests must stay green).
+- Drag-and-drop behaviour is tested through the pure `resolveDragOutcome`; real pointer or keyboard drag in `DndContext` is not exercised.
 
-## Type Checking
+## Linting and Formatting
 
-- **Tool**: TypeScript ^5.7.2, `strict: true` in `tsconfig.json`.
-- **Script**: `pnpm typecheck` (`tsc --noEmit`).
-- **Assessment**: Strict mode is a positive signal — it enables `strictNullChecks`, `noImplicitAny`, and related checks by default. All source files are typed (`.ts`/`.tsx`); `allowJs: false` prevents accidental untyped JS files from entering the tree.
+- ESLint 9 flat config with `next/core-web-vitals` and `next/typescript`; `pnpm lint` runs `eslint src/` only.
+- Prettier configured (`.prettierrc.json`, `.prettierignore`) with `format` and `format:check` scripts; `format:check` is not part of CI.
+- TypeScript strict mode, `pnpm typecheck`.
+- No `eslint-disable` suppressions, no TODO/FIXME/HACK markers found in `src/`.
 
 ## CI/CD
 
-- **Status**: None found. No `.github/workflows/`, no other CI/CD configuration of any kind in the repository.
-- **Assessment**: Lint, typecheck, and (absent) tests are not currently enforced automatically on any change — they exist only as manually-run `package.json` scripts.
+`.github/workflows/ci.yml` runs on push and pull request to `main`: checkout, pnpm setup, Node LTS with pnpm cache, `pnpm install --frozen-lockfile`, lint, typecheck, test. Missing: build, format check, coverage, deploy. Permissions limited to `contents: read`.
 
 ## Documentation
 
-- **README.md**: Present and substantive — covers features, requirements (Node 20.9+, pnpm), setup/run steps, useful commands, project structure, and a dedicated "How persistence works" section that explicitly documents the `localStorage` design and its limitations (device-specific, clearable, not secure, not multi-user). This is a notably clear and honest account of the app's current scope and limitations.
-- **In-code documentation**: No JSDoc/TSDoc comments anywhere in the 7 source files. Given the small size and descriptive naming of each file, this is a minor gap rather than a significant quality issue at the current scale.
-- **Inline comments**: None found in the application source; the one comment (`.env.example`) is a single explanatory line about why no env vars are needed.
+- `README.md` exists but is stale: lists a status filter that no longer exists, lists only the old file tree, and lists "add edit-task support" and "add tests" as future work although both exist.
+- No code comments by project rule; names carry intent.
 
-## Technical Debt Signals (consolidated)
+## Technical Debt
 
-1. **No automated tests** — highest-priority gap (see Test Coverage above).
-2. **No CI/CD pipeline** — quality gates are opt-in/manual only.
-3. **Unused `updateTask` export** — `use-tasks.ts` exports `updateTask` but `task-dashboard.tsx` never calls it; there is no edit-task UI yet (consistent with the README's own "Next development steps" item 1).
-4. **Non-functional UI affordances**: the sidebar "Activity" and "Settings" nav links (`href="#activity"`, `href="#settings"`) have no corresponding views; the "sort tasks by due date" icon button (`ArrowDownWideNarrow`, `title="Sort tasks by due date"`) only resets the filter to `"all"` and does not actually sort.
-5. **Single multi-responsibility component file**: `task-dashboard.tsx` (~183 lines) combines page shell, stats, task list, and create-task modal/form in one file with two inline sub-components. Not yet a "god file" (well under the 500-line threshold) but a natural candidate to split if the UI grows.
-6. **Unvalidated date parsing**: `formatDate()` in `task-dashboard.tsx` builds a `Date` from string concatenation without validating the input shape first; a malformed `dueDate` would silently render "Invalid Date" rather than being caught or defaulted earlier.
-7. **Silent persistence-failure handling**: `writeTasks()` catches all storage errors (e.g., quota exceeded) and only `console.error`s them — there is no user-visible indication that a save failed, which matters more as the app's reliance on `localStorage` is central to its whole value proposition.
-8. **No dependency-vulnerability scan performed** — `pnpm audit` (or equivalent) was not run as part of this static scan; versions appear current but have not been checked against advisories.
+1. Dead legacy CSS and unused Tailwind in `src/app/globals.css`, `tailwind.config.ts`.
+2. `TaskDashboard` mixes layout, top bar, summary, and dialog form; candidate for extraction.
+3. Stored data is cast to `Task[]` without validation or migration; key is versioned `v1`.
+4. Two icon libraries (`lucide-react`, `@mui/icons-material`).
+5. Duplicated status label maps.
+6. Module-level mutable store state in `use-tasks.ts` (`snapshot`, `loadStarted`) reset on last unsubscribe; correct but subtle.
+7. Hardcoded UI literals (avatar "JD", "MAKE IT HAPPEN", seeded 2026-11 dates, colour hex values throughout `sx`).
+8. No delete confirmation or undo.
+9. Lint script excludes root config files.
+10. `README.md` and `.env.example` do not reflect the current app.
 
-## Positive Indicators
+## Security Notes
 
-- No TODO/FIXME/HACK comments anywhere in the source — nothing left half-finished or flagged for later without already being captured above.
-- No hard-coded secrets, credentials, or API keys anywhere (consistent with the app having no backend to authenticate against).
-- Strict TypeScript, modern dependency versions (Next 15 / React 19), and a working ESLint configuration with no accumulated suppression comments.
-- Clear, descriptive naming throughout (`readTasks`, `writeTasks`, `useTasks`, `starterTasks`, `filteredTasks`) that keeps the small codebase easy to follow without heavy comments.
-- Clean, acyclic internal module dependency graph (`types → lib → hooks → components → app`) with no circular references.
+No secrets, no network calls, no `dangerouslySetInnerHTML`; user text rendered through React escaping. Input lengths limited in the dialog (title 100, description 500). Data is unauthenticated browser-local storage by design.

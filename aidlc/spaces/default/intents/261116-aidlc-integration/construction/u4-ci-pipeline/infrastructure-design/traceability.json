@@ -1,0 +1,32 @@
+{
+  "stage": "infrastructure-design",
+  "unit": "u4-ci-pipeline",
+  "upstream_ids": [
+    "NFR5.1",
+    "NFR5.3",
+    "NFR5.2",
+    "NFR4"
+  ],
+  "coverage": [
+    {
+      "id": "NFR5.1",
+      "status": "OK",
+      "target": "cicd-pipeline.md: Secrets Management in CI/CD section, no secrets.* reference in any stage"
+    },
+    {
+      "id": "NFR5.3",
+      "status": "OK",
+      "target": "infrastructure-specification.md: Deployment table networking/environments rows; cicd-pipeline.md carries the permissions/trigger scoping into the stage sequence"
+    },
+    {
+      "id": "NFR5.2",
+      "status": "OK",
+      "target": "cicd-pipeline.md: Build Stages table names the same pinned actions as nfr-design/security-design.md"
+    },
+    {
+      "id": "NFR4",
+      "status": "OK",
+      "target": "monitoring-design.md: Logs & Tracing section (unsuppressed tool output per stage)"
+    }
+  ]
+}

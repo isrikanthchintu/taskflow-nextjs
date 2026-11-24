@@ -1,0 +1,8 @@
+{
+  "stage": "code-generation",
+  "unit": "u1-git-repository",
+  "version": 1,
+  "writes": [
+    { "path": ".gitignore" }
+  ]
+}

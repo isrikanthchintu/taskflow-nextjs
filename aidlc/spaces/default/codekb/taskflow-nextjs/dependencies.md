@@ -1,55 +1,53 @@
 # Dependencies
 
-## External Dependencies (runtime)
+External packages and versions are listed once in `technology-stack.md`; this file records how they are used and the internal graph.
 
-| Package | Version (package.json) | Purpose |
-|---|---|---|
-| `next` | ^15.5.0 | App framework: routing, dev/build/start, bundling |
-| `react` | ^19.1.0 | UI library |
-| `react-dom` | ^19.1.0 | DOM rendering for React |
-| `lucide-react` | ^0.468.0 | Icon components used throughout the dashboard UI |
+## Internal Dependency Graph
 
-## External Dependencies (development)
-
-| Package | Version (package.json) | Purpose |
-|---|---|---|
-| `typescript` | ^5.7.2 | Static typing, compiled via `tsc --noEmit` for type-checking only |
-| `@types/node` | ^22.10.0 | Node.js type definitions |
-| `@types/react` | ^19.0.0 | React type definitions |
-| `@types/react-dom` | ^19.0.0 | React DOM type definitions |
-| `eslint` | ^9.17.0 | Linting engine (flat config) |
-| `eslint-config-next` | ^15.5.0 | Next.js recommended/core-web-vitals/typescript lint rule presets |
-| `@eslint/eslintrc` | ^3.3.7 | `FlatCompat` shim to load the legacy-style Next.js configs under ESLint's flat config system |
-| `tailwindcss` | ^3.4.17 | Utility-first CSS framework (directives only engaged; see `technology-stack.md`) |
-| `postcss` | ^8.4.49 | CSS transform pipeline required by Tailwind |
-| `autoprefixer` | ^10.6.2 | PostCSS plugin adding vendor prefixes |
-
-No other packages appear in `package.json`. `pnpm-lock.yaml` additionally pins the full transitive dependency tree (not individually enumerated here — it is pnpm's standard lockfile output, not hand-authored dependency declarations).
-
-## Version Conflicts / Advisories
-
-None observed from manifest inspection alone (no build/install was run, per scan constraints). All direct dependencies are pinned to current-generation major versions (Next 15, React 19, TypeScript 5.7) with no stale major-version lag visible from the manifest. A proper security-advisory check would require running `pnpm audit` or an equivalent tool, which was not executed as part of this static scan.
-
-## Internal (cross-module) Dependencies
-
-Single-package repository — no internal package-to-package dependencies (no workspaces, no `packages/` directory). Internal *module* dependencies within `src/` are:
-
-```text
-src/types/task.ts            <- (no internal deps; leaf)
-src/lib/task-storage.ts      <- src/types/task.ts
-src/hooks/use-tasks.ts       <- src/lib/task-storage.ts, src/types/task.ts
-src/components/task-dashboard.tsx
-                              <- src/hooks/use-tasks.ts, src/types/task.ts
-src/app/page.tsx             <- src/components/task-dashboard.tsx
-src/app/layout.tsx           <- src/app/globals.css
+```mermaid
+flowchart LR
+  types["types/task.ts"] --> storage["lib/task-storage.ts"]
+  storage --> hook["hooks/use-tasks.ts"]
+  types --> hook
+  hook --> card["components/task-card.tsx"]
+  hook --> board["components/kanban-board.tsx"]
+  hook --> dash["components/task-dashboard.tsx"]
+  card --> column["components/kanban-column.tsx"]
+  column --> board
+  board --> dash
+  dash --> page["app/page.tsx"]
+  theme["theme.ts"] --> registry["theme-registry.tsx"]
+  registry --> layout["app/layout.tsx"]
 ```
 
-This forms a clean, acyclic dependency chain: `types → lib → hooks → components → app`. No circular references were found anywhere in the 7-file source tree.
+Text fallback adjacency list:
 
-## Path Aliasing
+- `task-storage.ts` -> `types/task`
+- `use-tasks.ts` -> `lib/task-storage`, `types/task`, react
+- `task-card.tsx` -> `hooks/use-tasks`, `types/task`, `@dnd-kit/sortable`, MUI, MUI icons
+- `kanban-column.tsx` -> `components/task-card`, `types/task`, `@dnd-kit/core`, `@dnd-kit/sortable`, MUI, lucide-react
+- `kanban-board.tsx` -> `hooks/use-tasks`, `components/kanban-column`, `types/task`, `@dnd-kit/core`, `@dnd-kit/sortable`, MUI
+- `task-dashboard.tsx` -> `hooks/use-tasks`, `components/kanban-board`, `types/task`, MUI, lucide-react
+- `page.tsx` -> `components/task-dashboard`
+- `layout.tsx` -> `theme-registry`, `globals.css`, next types
+- `theme-registry.tsx` -> `theme`, `@mui/material`, `@mui/material-nextjs`
+- `theme.ts` -> `@mui/material/styles`
 
-`tsconfig.json` defines `"@/*": ["./src/*"]`, used throughout the source (e.g., `import { useTasks } from "@/hooks/use-tasks"`) so all internal cross-module imports resolve through this alias rather than relative paths.
+All internal imports use the `@/` alias. No circular references.
 
-## External Services
+## External Dependency Usage
 
-None. No outbound HTTP/network calls, no third-party API integrations, no cloud SDKs appear anywhere in the source or dependency manifest.
+- **MUI** (material, icons-material, material-nextjs, emotion): all UI primitives and styling; `TaskCard` uses `@mui/icons-material`, the dashboard and column use `lucide-react`, so two icon libraries coexist.
+- **@dnd-kit**: `core` provides `DndContext`, sensors, `DragOverlay`, `useDroppable`; `sortable` provides `useSortable`, `SortableContext`, `sortableKeyboardCoordinates`, `verticalListSortingStrategy`.
+- **next**: App Router, `Metadata` type, `next/jest`.
+- **tailwindcss/postcss/autoprefixer**: build-time only; Tailwind directives in `globals.css`.
+
+## Test Dependencies
+
+Jest, jsdom, Testing Library, user-event; tests mock or exercise `useTasks` and `localStorage` as described in `code-quality-assessment.md`.
+
+## Version Observations
+
+- `@mui/material` ^9.5.0 with `@mui/material-nextjs` v15 App Router entry point matches Next 15.
+- `@dnd-kit/sortable` ^8.0.0 is paired with `@dnd-kit/core` ^6.1.0.
+- Lockfile `pnpm-lock.yaml` is present; CI installs with `--frozen-lockfile`. No audit or outdated check was run (read-only scan).

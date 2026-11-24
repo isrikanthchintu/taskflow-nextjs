@@ -1,0 +1,13 @@
+{
+  "stage": "code-generation",
+  "unit": "u2-test-infrastructure",
+  "version": 1,
+  "writes": [
+    { "path": "package.json" },
+    { "path": "jest.config.ts" },
+    { "path": "jest.setup.ts" },
+    { "path": "src/lib/task-storage.test.ts" },
+    { "path": "src/hooks/use-tasks.test.ts" },
+    { "path": "src/components/task-dashboard.test.tsx" }
+  ]
+}

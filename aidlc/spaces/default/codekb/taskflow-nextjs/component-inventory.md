@@ -1,67 +1,72 @@
 # Component Inventory
 
-## RootLayout
-- **File**: `src/app/layout.tsx`
-- **Type**: Next.js App Router root layout (Server Component, default)
-- **Responsibility**: Defines the outer `<html>`/`<body>` shell for every page, imports `globals.css`, and sets the document `<Metadata>` (title, description).
-- **Dependencies**: `next` (`Metadata` type), `./globals.css`.
-- **Dependents**: Implicitly wraps every route in `src/app/`; the only route today is `page.tsx`.
-
-## HomePage
-- **File**: `src/app/page.tsx`
-- **Type**: Next.js route component (`/`), Server Component (no `"use client"` directive)
-- **Responsibility**: Entry point for the `/` route; renders `TaskDashboard` with no props.
-- **Dependencies**: `src/components/task-dashboard.tsx` (`TaskDashboard`).
-- **Dependents**: None (leaf route).
-
 ## TaskDashboard
-- **File**: `src/components/task-dashboard.tsx`
-- **Type**: Client Component (`"use client"`)
-- **Responsibility**: The entire application UI — sidebar navigation (static placeholder links), topbar, welcome header, stats grid, search/filter controls, task list, "create task" modal/form, and page footer. Owns local UI state (`filter`, `query`, `showForm`, and the create-task form fields) and derives `filteredTasks`/`counts` via `useMemo` from the data returned by `useTasks()`.
-- **Dependencies**: `useTasks` (`src/hooks/use-tasks.ts`), `Task`/`TaskPriority`/`TaskStatus` types (`src/types/task.ts`), `lucide-react` icons.
-- **Dependents**: `HomePage`.
-- **Internal sub-components** (defined in the same file, not separately exported/importable):
-  - **StatCard** — presentational card showing one summary metric (label, value, helper text, icon, color tone). Used four times for Total/To-do/In-progress/Completed.
-  - **TaskRow** — presentational row for a single task: status-toggle circle, title/description, priority badge, status badge, formatted due date, delete button. Computes the "next status" cycle (`todo → in-progress → done → todo`) and calls `onStatusChange`/`onDelete` props passed down from `TaskDashboard`.
 
-## useTasks (hook)
+- **File**: `src/components/task-dashboard.tsx` (404 lines, plus internal `StatPill`)
+- **Responsibility**: Page shell with top bar (logo, search, "New task", avatar), "My Tasks" heading, summary pills, loading state, `KanbanBoard`, and the create/edit task dialog (MUI `Dialog`). Owns search query and form state.
+- **Depends on**: `useTasks` (`tasks`, `isReady`, `addTask`, `updateTask`), `KanbanBoard`, MUI, lucide-react, `Task` types.
+
+## KanbanBoard
+
+- **File**: `src/components/kanban-board.tsx`
+- **Responsibility**: `DndContext` with `PointerSensor` (distance 4) and `KeyboardSensor`; derives full and visible columns and unfiltered counts; resolves drops via `resolveDragOutcome`; renders three `KanbanColumn` and a `DragOverlay`.
+- **Depends on**: `useTasks` (`moveTask`, `reorderTask`), `KanbanColumn`, `columnDroppableId`, `@dnd-kit/core`, `@dnd-kit/sortable`, MUI.
+
+## KanbanColumn
+
+- **File**: `src/components/kanban-column.tsx`
+- **Responsibility**: One status column: header with label and count, droppable body with `SortableContext`, empty-state text "No matching cards", optional "Add a card" button. Highlights when a drag is over it.
+- **Depends on**: `TaskCard`, `useDroppable`, `SortableContext`, MUI, lucide-react.
+
+## TaskCard
+
+- **File**: `src/components/task-card.tsx`
+- **Responsibility**: Sortable card showing priority badge, title (struck through when done), clamped description, due date, drag handle, status cycle control, and delete control. Card click opens edit; controls marked `data-no-edit`.
+- **Depends on**: `useTasks` (`deleteTask`, `moveTask`), `useSortable`, MUI and MUI icons.
+
+## useTasks
+
 - **File**: `src/hooks/use-tasks.ts`
-- **Type**: Custom React hook (client-only logic, used inside a `"use client"` component)
-- **Responsibility**: Owns the canonical `tasks` array and `isReady` flag; loads/seeds data on mount; persists on every change; exposes `addTask`, `updateTask`, `deleteTask`, `setStatus` mutators. See `api-documentation.md` for the full contract.
-- **Dependencies**: `readTasks`/`writeTasks` (`src/lib/task-storage.ts`), `Task`/`TaskPriority`/`TaskStatus` types.
-- **Dependents**: `TaskDashboard` (sole consumer).
-- **Internal data**: `starterTasks` — a hard-coded 4-item seed array used only when storage is empty on first load.
+- **Responsibility**: Module-level external task store with seeding, load-once, and mutation actions; persists through `task-storage`.
+- **Depends on**: `readTasks`, `writeTasks`, `Task` types, React `useSyncExternalStore`, `useEffect`.
 
-## task-storage module
+## task-storage
+
 - **File**: `src/lib/task-storage.ts`
-- **Type**: Plain TypeScript module (no React), persistence utility
-- **Responsibility**: Sole boundary to `window.localStorage`; exposes `readTasks()` and `writeTasks(tasks)`. See `api-documentation.md` for the full contract.
-- **Dependencies**: `Task` type.
-- **Dependents**: `useTasks` (sole consumer).
+- **Responsibility**: SSR-safe `localStorage` read and write of the task array under `taskflow.tasks.v1`.
+- **Depends on**: `Task` type.
 
-## task types module
+## Task types
+
 - **File**: `src/types/task.ts`
-- **Type**: Plain TypeScript type/interface definitions (no runtime code)
-- **Responsibility**: Defines `TaskStatus`, `TaskPriority`, and the `Task` interface — the single shared data model for the whole app.
-- **Dependencies**: None (leaf module).
-- **Dependents**: `task-dashboard.tsx`, `use-tasks.ts`, `task-storage.ts`.
+- **Responsibility**: `Task`, `TaskStatus`, `TaskPriority`.
+- **Depends on**: nothing.
 
-## globals.css
-- **File**: `src/app/globals.css`
-- **Type**: Global stylesheet
-- **Responsibility**: Three `@tailwind` directives (base/components/utilities) followed by the app's entire hand-written visual design — layout (`.app-shell`, `.sidebar`, `.main-content`), stat cards, task list/rows, modal, and responsive breakpoints at 1000px/720px/390px.
-- **Dependencies**: Tailwind/PostCSS build pipeline.
-- **Dependents**: Loaded once by `RootLayout`; styles every class name referenced in `task-dashboard.tsx`.
+## ThemeRegistry
 
-## Component Relationship Summary
+- **File**: `src/theme-registry.tsx`
+- **Responsibility**: Client wrapper providing `AppRouterCacheProvider`, `ThemeProvider`, and `CssBaseline`.
+- **Depends on**: `theme`, `@mui/material-nextjs`.
 
-```text
-RootLayout
-  └─ HomePage (route "/")
-       └─ TaskDashboard  ──uses──>  useTasks()  ──uses──>  task-storage.ts  ──persists to──>  localStorage
-            ├─ StatCard (×4, inline sub-component)
-            └─ TaskRow (×N, inline sub-component)
-       (all of the above reference types/task.ts)
-```
+## theme
 
-No class-based components, no context providers, no third-party state-management or data-fetching library (e.g., no React Query, SWR, Redux, Zustand) are present anywhere in the inventory — state management is entirely local `useState`/`useMemo`/`useEffect` within `useTasks` and `TaskDashboard`.
+- **File**: `src/theme.ts`
+- **Responsibility**: MUI theme: Trello-blue palette, shape, typography, button, paper, chip, dialog defaults.
+- **Depends on**: `@mui/material/styles`.
+
+## RootLayout and HomePage
+
+- **Files**: `src/app/layout.tsx`, `src/app/page.tsx`
+- **Responsibility**: HTML shell, metadata, global CSS import, theme wrapper; the single route rendering `TaskDashboard`.
+- **Depends on**: `ThemeRegistry`, `TaskDashboard`, `globals.css`.
+
+## Test Suites
+
+| File | Cases |
+|---|---|
+| `src/components/kanban-board.test.tsx` | 10 |
+| `src/components/kanban-column.test.tsx` | 4 |
+| `src/components/task-card.test.tsx` | 6 |
+| `src/components/task-dashboard.test.tsx` | 7 |
+| `src/hooks/use-tasks.test.ts` | 9 |
+| `src/lib/task-storage.test.ts` | 5 |

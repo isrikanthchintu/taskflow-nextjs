@@ -1,0 +1,20 @@
+{
+  "stage": "nfr-requirements",
+  "unit": "u4-ci-pipeline",
+  "upstream_ids": [
+    "NFR2",
+    "NFR4"
+  ],
+  "coverage": [
+    {
+      "id": "NFR2",
+      "status": "OK",
+      "target": "tech-stack-decisions.md: this unit adds no package.json entry at all, dev or production"
+    },
+    {
+      "id": "NFR4",
+      "status": "Deferred",
+      "target": "no reliability/observability-requirements document applies to packaging-kind units (produces_kinds); NFR4's concrete design (failure-step naming) belongs to infrastructure-design/cicd-pipeline.md, designed next"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "stage": "nfr-design",
+  "unit": "u2-test-infrastructure",
+  "upstream_ids": [
+    "NFR5.1",
+    "NFR5.2",
+    "NFR5.3"
+  ],
+  "coverage": [
+    {
+      "id": "NFR5.1",
+      "status": "OK",
+      "target": "security-design.md: devDependencies-only placement rule"
+    },
+    {
+      "id": "NFR5.2",
+      "status": "OK",
+      "target": "security-design.md: jsdom-default test environment with no process.env reads, node-environment override for the SSR-guard test"
+    },
+    {
+      "id": "NFR5.3",
+      "status": "OK",
+      "target": "security-design.md: fixture data follows the existing starterTasks synthetic-content convention"
+    }
+  ]
+}

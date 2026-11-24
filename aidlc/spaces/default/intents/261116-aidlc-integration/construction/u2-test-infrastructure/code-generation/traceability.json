@@ -1,0 +1,30 @@
+{
+  "stage": "code-generation",
+  "unit": "u2-test-infrastructure",
+  "upstream_ids": [
+    "FR2.1",
+    "FR2.2",
+    "FR3.1",
+    "FR3.2",
+    "FR3.3",
+    "NFR1",
+    "NFR2",
+    "NFR3",
+    "NFR5.1",
+    "NFR5.2",
+    "NFR5.3"
+  ],
+  "coverage": [
+    { "id": "FR2.1", "status": "OK", "target": "jest.config.ts" },
+    { "id": "FR2.2", "status": "OK", "target": "package.json" },
+    { "id": "FR3.1", "status": "OK", "target": "src/lib/task-storage.test.ts" },
+    { "id": "FR3.2", "status": "OK", "target": "src/hooks/use-tasks.test.ts" },
+    { "id": "FR3.3", "status": "OK", "target": "src/components/task-dashboard.test.tsx" },
+    { "id": "NFR1", "status": "OK", "target": "src/components/task-dashboard.test.tsx" },
+    { "id": "NFR2", "status": "OK", "target": "package.json" },
+    { "id": "NFR3", "status": "N/A", "target": "left qualitative per requirements.md Assumption A5 (no fixed duration target confirmed); the applicable check for this unit is the scoped test command's 15/15 passing run recorded in code-summary.md, not a timing figure" },
+    { "id": "NFR5.1", "status": "OK", "target": "package.json" },
+    { "id": "NFR5.2", "status": "OK", "target": "src/lib/task-storage.test.ts" },
+    { "id": "NFR5.3", "status": "OK", "target": "src/hooks/use-tasks.test.ts" }
+  ]
+}

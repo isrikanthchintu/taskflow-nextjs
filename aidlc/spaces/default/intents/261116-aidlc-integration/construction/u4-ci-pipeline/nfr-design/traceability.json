@@ -1,0 +1,26 @@
+{
+  "stage": "nfr-design",
+  "unit": "u4-ci-pipeline",
+  "upstream_ids": [
+    "NFR5.1",
+    "NFR5.2",
+    "NFR5.3"
+  ],
+  "coverage": [
+    {
+      "id": "NFR5.1",
+      "status": "OK",
+      "target": "security-design.md: no secrets context referenced in the workflow"
+    },
+    {
+      "id": "NFR5.2",
+      "status": "OK",
+      "target": "security-design.md: every action uses: entry pins an explicit major version"
+    },
+    {
+      "id": "NFR5.3",
+      "status": "OK",
+      "target": "security-design.md: push/pull_request-only trigger plus explicit permissions: contents: read"
+    }
+  ]
+}

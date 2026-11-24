@@ -1,0 +1,26 @@
+{
+  "stage": "infrastructure-design",
+  "unit": "u2-test-infrastructure",
+  "upstream_ids": [
+    "NFR5.1",
+    "NFR5.3",
+    "NFR5.2"
+  ],
+  "coverage": [
+    {
+      "id": "NFR5.1",
+      "status": "N/A",
+      "target": "no infrastructure provisioning required; fully satisfied by package.json devDependencies placement (nfr-design/security-design.md)"
+    },
+    {
+      "id": "NFR5.3",
+      "status": "N/A",
+      "target": "no infrastructure provisioning required; fully satisfied by the fixture-authoring convention (nfr-design/security-design.md)"
+    },
+    {
+      "id": "NFR5.2",
+      "status": "OK",
+      "target": "cicd-pipeline.md: u4-ci-pipeline configures no secrets for this unit's Test stage"
+    }
+  ]
+}

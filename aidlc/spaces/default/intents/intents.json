@@ -4,7 +4,23 @@
     "slug": "aidlc-integration",
     "dirName": "261116-aidlc-integration",
     "scope": "classic",
-    "status": "in-flight",
+    "status": "complete",
     "request": "5aeba023"
+  },
+  {
+    "uuid": "01a1ee1a-5b3d-7296-ba25-ccbda5a5beb7",
+    "slug": "trello-board",
+    "dirName": "261118-trello-board",
+    "scope": "feature",
+    "status": "complete",
+    "request": "9597d767"
+  },
+  {
+    "uuid": "01a20cd8-9f9f-7357-acad-89646a973b6e",
+    "slug": "board-enhancements",
+    "dirName": "261124-board-enhancements",
+    "scope": "bugfix",
+    "status": "complete",
+    "request": "ea73a8dc"
   }
 ]

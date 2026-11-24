@@ -11,9 +11,9 @@
 - [x] **Step 1**: Verify the existing `.gitignore`'s AI-DLC-managed block already satisfies `NFR5.2` (AI-DLC workspace files excluded). Confirm by inspection — no edit needed if it already covers `aidlc/active-space`, `aidlc/.aidlc-sessions/`, `aidlc/spaces/*/intents/*/.aidlc-*`, and the other workspace runtime patterns (`FR1.1`, `NFR5.2`).
 - [x] **Step 2**: Append the specific secret/credential patterns `NFR5.1` needs that the existing `.gitignore` does not yet have: `*.pem`, `*.key`, `Thumbs.db`, `*.swp` (the file already has `.env*`/`!.env.example` and `.DS_Store`, covering most of `FR1.1`'s environment-file and OS-artifact categories) (`FR1.1`, `NFR5.1`).
 - [x] **Step 3**: Run `git init` to initialize the local repository (`FR1.1`).
-- [ ] **Step 4**: Stage the project and run the verification command in `unit-test-instructions.md` to confirm no excluded pattern is staged, before committing (`NFR5.1`, `NFR5.2`).
-- [ ] **Step 5**: Make the initial commit capturing the project exactly as it stands today, before any further tooling changes land (`FR1.2`).
-- [ ] **Step 6**: Documentation and traceability — confirm `code-summary.md` and `traceability.json` are written.
+- [x] **Step 4**: Stage the project and run the verification command in `unit-test-instructions.md` to confirm no excluded pattern is staged, before committing (`NFR5.1`, `NFR5.2`). (Command printed a false-positive FAIL matching only `.env.example` — investigated and resolved; see code-summary.md.)
+- [x] **Step 5**: Make the initial commit capturing the project exactly as it stands today, before any further tooling changes land (`FR1.2`).
+- [x] **Step 6**: Documentation and traceability — confirm `code-summary.md` and `traceability.json` are written.
 
 ## Why no test files
 

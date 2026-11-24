@@ -1,0 +1,20 @@
+{
+  "stage": "code-generation",
+  "unit": "u1-kanban-board",
+  "version": 1,
+  "writes": [
+    { "path": "src/components/task-card.tsx" },
+    { "path": "src/components/task-card.test.tsx" },
+    { "path": "src/components/kanban-column.tsx" },
+    { "path": "src/components/kanban-column.test.tsx" },
+    { "path": "src/components/kanban-board.tsx" },
+    { "path": "src/components/kanban-board.test.tsx" },
+    { "path": "src/components/task-dashboard.tsx" },
+    { "path": "src/components/task-dashboard.test.tsx" },
+    { "path": "src/hooks/use-tasks.ts" },
+    { "path": "src/hooks/use-tasks.test.ts" },
+    { "path": "src/app/globals.css" },
+    { "path": "package.json" },
+    { "path": "pnpm-lock.yaml" }
+  ]
+}

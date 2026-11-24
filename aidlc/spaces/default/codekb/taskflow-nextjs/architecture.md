@@ -1,135 +1,126 @@
-# Architecture Analysis
+## Architecture Analysis
 
-## System Overview
+### System Overview
 
-TaskFlow is a single-page, client-rendered Next.js (App Router) application with no backend of its own. It consists of one route (`/`) that renders a single top-level client component (`TaskDashboard`), a custom React hook (`useTasks`) that owns all task state, and a thin persistence module (`task-storage.ts`) that reads/writes the browser's `localStorage`. There are no API routes, no server actions, no database, and no external network calls anywhere in the codebase.
+TaskFlow is a client-rendered Next.js 15 App Router application with one route (`/`). The server renders only the shell (`src/app/layout.tsx`, `src/app/page.tsx`); everything interactive is a `"use client"` component. State lives in a module-level external store inside `src/hooks/use-tasks.ts`, backed by `localStorage` through `src/lib/task-storage.ts`. UI is Material UI (emotion) with `@dnd-kit` for drag and drop.
 
-## Architectural Style
+### Architectural Style
 
-**Client-rendered monolithic single-page app, backend-free.** Evidence:
-- `src/app/page.tsx` renders only `<TaskDashboard />`, a component marked `"use client"` in `src/components/task-dashboard.tsx` — the entire interactive UI is client-side.
-- No `src/app/api/` directory, no route handlers, no server actions (`"use server"`) anywhere in `src/`.
-- All state lives in a single `useTasks()` hook instance held by `TaskDashboard`; there is no global store, context provider, or state-management library (no Redux/Zustand/Jotai/etc. in dependencies).
-- Persistence is entirely client-side via the Web Storage API (`localStorage`), not a server-backed database.
+Monolithic single-package front-end application with no backend. Evidence: no `src/app/api`, no route handlers, no server actions, no ORM or database driver; one `package.json`; one route.
 
-This is a layered-but-flat structure rather than a classic multi-service architecture: UI layer (`components/`) → state/hook layer (`hooks/`) → persistence layer (`lib/`) → browser storage, with a shared `types/` module cutting across all three.
+Layered, acyclic dependency graph: `types -> lib -> hooks -> components -> app`, with `theme.ts -> theme-registry.tsx -> app/layout.tsx` as a parallel styling branch.
 
-## Component Relationships
+### Component Relationships
 
 ```mermaid
 flowchart TD
-    A["app/layout.tsx (RootLayout)"] --> B["app/page.tsx (HomePage)"]
-    B --> C["components/task-dashboard.tsx (TaskDashboard)"]
-    C --> D["hooks/use-tasks.ts (useTasks)"]
-    D --> E["lib/task-storage.ts (readTasks / writeTasks)"]
-    E --> F[("Browser localStorage\nkey: taskflow.tasks.v1")]
-    C -. "Task, TaskStatus, TaskPriority types" .- G["types/task.ts"]
-    D -. "Task, TaskStatus, TaskPriority types" .- G
-    E -. "Task type" .- G
-    C --> H["StatCard (local sub-component)"]
-    C --> I["TaskRow (local sub-component)"]
+  Layout["app/layout.tsx RootLayout"] --> ThemeRegistry["theme-registry.tsx ThemeRegistry"]
+  ThemeRegistry --> Theme["theme.ts theme"]
+  Layout --> Page["app/page.tsx HomePage"]
+  Page --> Dashboard["TaskDashboard"]
+  Dashboard --> Board["KanbanBoard"]
+  Board --> Column["KanbanColumn x3"]
+  Column --> Card["TaskCard"]
+  Dashboard --> Hook["useTasks"]
+  Board --> Hook
+  Card --> Hook
+  Hook --> Storage["task-storage readTasks writeTasks"]
+  Storage --> LS[("localStorage taskflow.tasks.v1")]
+  Board --> Dnd["dnd-kit DndContext"]
+  Column --> Dnd
+  Card --> Dnd
 ```
 
-Text fallback: `RootLayout` wraps `HomePage`, which renders `TaskDashboard`. `TaskDashboard` consumes the `useTasks` hook for all task data and mutation functions, and renders two small local sub-components (`StatCard`, `TaskRow`) defined in the same file. `useTasks` delegates reading and writing the task list to `task-storage.ts`, which is the only module that touches `window.localStorage`, under the fixed key `taskflow.tasks.v1`. `types/task.ts` supplies the shared `Task`, `TaskStatus`, and `TaskPriority` types consumed by all three layers (components, hook, storage).
+Text fallback: `RootLayout` wraps `HomePage` in `ThemeRegistry` (which supplies the MUI `theme`). `HomePage` renders `TaskDashboard`, which renders `KanbanBoard`, which renders three `KanbanColumn` components, each rendering `TaskCard` items. `TaskDashboard`, `KanbanBoard`, and `TaskCard` all call `useTasks`, which reads and writes `localStorage` through `task-storage`. `KanbanBoard`, `KanbanColumn`, and `TaskCard` use `@dnd-kit` hooks and context.
 
-## Data Flow
+### Data Flow
 
-1. On first render (server-side, since Next.js renders `TaskDashboard`'s initial pass on the server before hydration), `useTasks()` initializes `tasks` to `[]` and `isReady` to `false` — the SSR-safe default, since `window`/`localStorage` do not exist on the server.
-2. After the component mounts in the browser, a `useEffect` runs once: it calls `readTasks()`, which reads and JSON-parses `localStorage["taskflow.tasks.v1"]`. If nothing is stored (first visit, or storage cleared), the hook falls back to a hard-coded `starterTasks` seed array. Either way, `isReady` flips to `true`.
-3. A second `useEffect`, gated on `[tasks, isReady]`, calls `writeTasks(tasks)` whenever `tasks` changes — but only once `isReady` is `true`, so the initial empty-array state never overwrites existing stored data before the read completes.
-4. All user actions (create, change status, delete) call a mutator function returned by `useTasks` (`addTask`, `setStatus`, `deleteTask`), which updates the `tasks` React state via `setTasks`. This state change re-renders `TaskDashboard` immediately (optimistic, synchronous UI update) and separately triggers the write-effect, which persists the new array to `localStorage` on the same tick.
-5. Search and status-filter are pure client-side derivations (`useMemo`) over the in-memory `tasks` array — they never touch storage.
+1. First client render: `useSyncExternalStore` returns the empty server snapshot (`isReady: false`), so the dashboard shows "Loading your tasks...".
+2. Effect in `useTasks` calls `loadOnce()`: reads `localStorage`; if empty, seeds four starter tasks and writes them; sets snapshot `isReady: true`.
+3. Mutations (`addTask`, `updateTask`, `deleteTask`, `setStatus`, `moveTask`, `reorderTask`) go through `setTasks`, which writes to storage once ready and notifies all subscribers.
+4. `KanbanBoard` derives `fullColumns` (ids by status in array order), `visibleColumns` (after search filter) and unfiltered `counts` from `tasks`.
+5. Order within a column is the relative order of that status's tasks in the single flat array; there is no position field.
 
-## Key Design Decisions
+### Key Design Decisions
 
-- **No backend by design**: the app intentionally avoids a server/database layer; all persistence is `localStorage`, scoped to one browser on one device. This is an explicit, documented trade-off (see `business-overview.md`), not an oversight.
-- **Single hook as the entire "data layer"**: `useTasks()` centralizes all task CRUD and the read/write-on-change persistence pattern, keeping `TaskDashboard` itself free of direct storage calls.
-- **Write-on-every-change via effect, not per-mutator call**: writes are driven by a `useEffect` watching the `tasks` array rather than each mutator (`addTask`, `deleteTask`, etc.) calling `writeTasks` directly. This keeps the persistence concern in one place but means every state change (including ones that might originate elsewhere in the future) is auto-persisted.
-- **Seed data for empty state**: a fixed `starterTasks` array seeds a first-time user's board, giving a non-empty demo experience without a backend.
-- **Type-sharing via a single `types/task.ts`**: `Task`, `TaskStatus`, and `TaskPriority` are defined once and imported by the component, hook, and storage module, keeping the shape consistent across layers.
+- External store with `useSyncExternalStore` and module-level state, so every `useTasks()` caller sees one shared task list (`src/hooks/use-tasks.ts`).
+- Pure, exported `resolveDragOutcome` separates drag decision logic from DnD events; it maps filtered (visible) positions onto the full list (ADR-005 referenced in tests).
+- Drag handle isolated on the card (`data-no-edit`) so card click opens edit, while controls and handle do not.
+- SSR safety: `readTasks` and `writeTasks` guard on `typeof window === "undefined"`.
+- MUI theme in `src/theme.ts` and emotion cache via `@mui/material-nextjs/v15-appRouter`.
 
-## Improvement Opportunities
+### Improvement Opportunities
 
-- The single `task-dashboard.tsx` file currently carries page-shell, stats, list, and modal-form responsibilities together (see `code-quality-assessment.md`); splitting these into dedicated components would ease future growth (e.g., adding routes, edit-task UI).
-- The write-on-every-change effect persists the entire task array on every mutation; for this app's size that is fine, but a future multi-user/backend evolution would need to replace this whole flow with network calls — the `readTasks`/`writeTasks` function boundary in `task-storage.ts` is the natural seam for that replacement, since `useTasks` only talks to those two functions.
-- No error surface exists for persistence failures (e.g., quota exceeded) beyond a console log — acceptable today, but worth a visible fallback if the app grows.
+- Remove dead legacy CSS and unused Tailwind wiring.
+- Validate and migrate stored data on read (currently a cast to `Task[]`).
+- Split `TaskDashboard` (404 lines) into top bar, summary, and task dialog components.
+- Add coverage reporting and a build and format check to CI.
+- Refresh the README.
 
 ## Interaction Diagrams
 
-### Task creation and persistence flow
+### Create a task from a column
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant TaskDashboard
-    participant useTasks as useTasks() hook
-    participant TaskStorage as task-storage.ts
-    participant LocalStorage as Browser localStorage
-
-    User->>TaskDashboard: Click "New task", fill form, submit
-    TaskDashboard->>TaskDashboard: handleSubmit() validates non-empty title
-    TaskDashboard->>useTasks: addTask({ title, description, priority, dueDate })
-    useTasks->>useTasks: build Task (id=crypto.randomUUID(), status="todo", createdAt=now)
-    useTasks->>useTasks: setTasks([newTask, ...current])
-    useTasks-->>TaskDashboard: re-render with updated tasks (immediate, optimistic)
-    Note over useTasks: useEffect([tasks, isReady]) fires because tasks changed
-    useTasks->>TaskStorage: writeTasks(tasks)
-    TaskStorage->>LocalStorage: localStorage.setItem("taskflow.tasks.v1", JSON.stringify(tasks))
-    LocalStorage-->>TaskStorage: (success, or throws on quota error -> caught & logged)
+  actor User
+  participant Col as KanbanColumn
+  participant Dash as TaskDashboard
+  participant Hook as useTasks
+  participant Store as task-storage
+  User->>Col: click Add a card
+  Col->>Dash: onAddCard(status)
+  Dash->>Dash: openCreateForm(status), show dialog
+  User->>Dash: submit form
+  Dash->>Hook: addTask(title, description, priority, dueDate, status)
+  Hook->>Hook: setTasks prepend new task
+  Hook->>Store: writeTasks(next)
+  Hook-->>Dash: notify subscribers, rerender board and pills
 ```
 
-### Initial load / seed flow (app mount)
+Text fallback: the user clicks "Add a card"; the column calls `onAddCard(status)`; the dashboard opens the dialog with that status; on submit it calls `addTask`; the hook prepends the task, writes the array through `writeTasks`, and notifies subscribers so the board and summary pills rerender.
+
+### Drag a card to another column or position
 
 ```mermaid
 sequenceDiagram
-    participant Browser
-    participant TaskDashboard
-    participant useTasks as useTasks() hook
-    participant TaskStorage as task-storage.ts
-    participant LocalStorage as Browser localStorage
-
-    Browser->>TaskDashboard: Mount (after SSR hydration)
-    TaskDashboard->>useTasks: render (tasks=[], isReady=false)
-    Note over useTasks: useEffect([]) runs once on mount
-    useTasks->>TaskStorage: readTasks()
-    TaskStorage->>LocalStorage: localStorage.getItem("taskflow.tasks.v1")
-    alt stored value exists and parses as array
-        LocalStorage-->>TaskStorage: JSON string
-        TaskStorage-->>useTasks: Task[] (parsed)
-    else no value, parse error, or not an array
-        LocalStorage-->>TaskStorage: null / invalid
-        TaskStorage-->>useTasks: []
-    end
-    alt tasks returned is empty
-        useTasks->>useTasks: setTasks(starterTasks) [hard-coded seed]
-    else tasks returned is non-empty
-        useTasks->>useTasks: setTasks(stored)
-    end
-    useTasks->>useTasks: setIsReady(true)
-    useTasks-->>TaskDashboard: re-render with loaded/seeded tasks
+  actor User
+  participant Card as TaskCard
+  participant Board as KanbanBoard
+  participant Resolve as resolveDragOutcome
+  participant Hook as useTasks
+  participant Store as task-storage
+  User->>Card: drag handle (pointer or keyboard)
+  Card->>Board: dnd-kit onDragStart
+  Board->>Board: set activeTask, show DragOverlay
+  User->>Board: drop
+  Board->>Resolve: activeId, overId, fullColumns, visibleColumns
+  Resolve-->>Board: move, reorder, or none
+  Board->>Hook: moveTask(id, status) or reorderTask(id, newIndex)
+  Hook->>Store: writeTasks(next)
+  Hook-->>Board: notify subscribers
 ```
 
-### Status change / delete flow
+Text fallback: dragging a card starts a `@dnd-kit` drag; on drop `KanbanBoard` calls `resolveDragOutcome` with the full and visible columns; a `move` outcome calls `moveTask`, a `reorder` outcome calls `reorderTask`, `none` does nothing; the hook persists via `writeTasks` and notifies subscribers.
+
+### Edit a task
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant TaskDashboard
-    participant useTasks as useTasks() hook
-    participant TaskStorage as task-storage.ts
-    participant LocalStorage as Browser localStorage
-
-    User->>TaskDashboard: Click status circle on a task row
-    TaskDashboard->>useTasks: setStatus(id, nextStatus)
-    useTasks->>useTasks: updateTask(id, { status }) -> setTasks(map over current)
-    useTasks-->>TaskDashboard: re-render
-    useTasks->>TaskStorage: writeTasks(tasks) [via effect]
-    TaskStorage->>LocalStorage: setItem("taskflow.tasks.v1", JSON.stringify(tasks))
-
-    User->>TaskDashboard: Click delete on a task row
-    TaskDashboard->>useTasks: deleteTask(id)
-    useTasks->>useTasks: setTasks(current.filter(task.id !== id))
-    useTasks-->>TaskDashboard: re-render
-    useTasks->>TaskStorage: writeTasks(tasks) [via effect]
-    TaskStorage->>LocalStorage: setItem("taskflow.tasks.v1", JSON.stringify(tasks))
+  actor User
+  participant Card as TaskCard
+  participant Dash as TaskDashboard
+  participant Hook as useTasks
+  User->>Card: click card body
+  Card->>Dash: onEditTask(task)
+  Dash->>Dash: openEditForm prefill fields
+  User->>Dash: Save changes
+  Dash->>Hook: updateTask(id, title, description, priority, dueDate)
+  Hook->>Hook: setTasks map, writeTasks
 ```
+
+Text fallback: clicking the card body (outside any `data-no-edit` control) calls `onEditTask`; the dashboard prefills the dialog; saving calls `updateTask` with title, description, priority, and due date only, never status, and the hook persists the change.
+
+### Cycle status and delete
+
+Clicking the circular control calls `moveTask(id, nextStatus)` (todo -> in-progress -> done -> todo); clicking the trash icon calls `deleteTask(id)`. Both stop click propagation so the edit dialog does not open, and both persist through the same `setTasks` path.
