@@ -23,7 +23,9 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ErrorOutlinedIcon from "@mui/icons-material/ErrorOutlined";
 import ScheduleIcon from "@mui/icons-material/Schedule";
-import { Plus, Trash2, X } from "lucide-react";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import CloseIcon from "@mui/icons-material/Close";
 import { useBoard } from "@/hooks/use-board";
 import * as ops from "@/lib/board-ops";
 import { dueState } from "@/lib/board-query";
@@ -137,7 +139,7 @@ function ChecklistBlock({
           aria-label={`Delete checklist ${checklist.title}`}
           onClick={() => api.deleteChecklist(checklist.id)}
         >
-          <Trash2 size={16} />
+          <DeleteOutlineIcon />
         </IconButton>
       </Stack>
       {checklist.items.map((item, index) => (
@@ -188,7 +190,7 @@ function ChecklistBlock({
             aria-label={`Delete item: ${item.text}`}
             onClick={() => api.deleteItem(checklist.id, item.id)}
           >
-            <X size={16} />
+            <DeleteOutlineIcon />
           </IconButton>
         </Stack>
       ))}
@@ -261,45 +263,72 @@ function LabelManager({ labels }: { labels: Label[] }) {
   return (
     <Box
       data-testid="label-manager"
-      sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1.5, mt: 1 }}
+      sx={{
+        border: "1px solid",
+        borderColor: "divider",
+        borderRadius: 2,
+        bgcolor: "background.default",
+        p: 1,
+        mt: 1
+      }}
     >
-      {labels.map((label) => (
-        <Stack
-          key={label.id}
-          direction="row"
-          spacing={1}
-          sx={{ alignItems: "center", mb: 1 }}
-        >
-          <EditableText
-            value={label.name}
-            label={`Label name: ${label.name}`}
-            onCommit={(next) => renameLabel(label.id, next)}
-          />
-          <TextField
-            select
-            size="small"
-            value={label.color}
-            onChange={(event) => recolorLabel(label.id, event.target.value)}
-            slotProps={{
-              select: { native: true },
-              htmlInput: { "aria-label": `Color for ${label.name}` }
-            }}
-          >
-            {colorOptions(label.color)}
-          </TextField>
-          <IconButton
-            size="small"
-            aria-label={`Delete label ${label.name}`}
-            onClick={() => deleteLabel(label.id)}
-          >
-            <Trash2 size={16} />
-          </IconButton>
-        </Stack>
-      ))}
-      <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
+      {labels.length > 0 && (
+        <Box sx={{ display: "grid", gap: 0.5, mb: 1 }}>
+          {labels.map((label) => (
+            <Box
+              key={label.id}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "minmax(120px, 1fr) 112px 32px",
+                alignItems: "center",
+                gap: 0.75,
+                minHeight: 40,
+                px: 0.5
+              }}
+            >
+              <EditableText
+                value={label.name}
+                label={`Label name: ${label.name}`}
+                onCommit={(next) => renameLabel(label.id, next)}
+              />
+              <TextField
+                select
+                size="small"
+                value={label.color}
+                onChange={(event) => recolorLabel(label.id, event.target.value)}
+                slotProps={{
+                  select: { native: true },
+                  htmlInput: { "aria-label": `Color for ${label.name}` }
+                }}
+              >
+                {colorOptions(label.color)}
+              </TextField>
+              <IconButton
+                size="small"
+                aria-label={`Delete label ${label.name}`}
+                onClick={() => deleteLabel(label.id)}
+                sx={{ color: "error.main" }}
+              >
+                <DeleteOutlineIcon />
+              </IconButton>
+            </Box>
+          ))}
+        </Box>
+      )}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "minmax(120px, 1fr) 112px auto",
+          alignItems: "start",
+          gap: 0.75,
+          pt: labels.length > 0 ? 1 : 0,
+          borderTop: labels.length > 0 ? "1px solid" : "none",
+          borderColor: "divider"
+        }}
+      >
         <TextField
           size="small"
-          label="New label name"
+          placeholder="New label name"
           value={name}
           error={Boolean(error)}
           helperText={error ?? undefined}
@@ -310,7 +339,6 @@ function LabelManager({ labels }: { labels: Label[] }) {
               add();
             }
           }}
-          sx={{ flex: 1 }}
         />
         <TextField
           select
@@ -324,10 +352,14 @@ function LabelManager({ labels }: { labels: Label[] }) {
         >
           {colorOptions(color)}
         </TextField>
-        <Button variant="outlined" onClick={add} sx={{ height: 40 }}>
+        <Button
+          variant="outlined"
+          onClick={add}
+          sx={{ height: 40, whiteSpace: "nowrap", px: 1.5 }}
+        >
           Add label
         </Button>
-      </Stack>
+      </Box>
     </Box>
   );
 }
@@ -349,11 +381,15 @@ function colorOptions(current: string) {
 function CardDialogBody({
   card,
   listId,
-  onClose
+  onClose,
+  hasHeader,
+  hasFooter
 }: {
   card: Card | null;
   listId: string;
   onClose: () => void;
+  hasHeader: boolean;
+  hasFooter: boolean;
 }) {
   const board = useBoard();
   const {
@@ -515,27 +551,43 @@ function CardDialogBody({
         minHeight: 0
       }}
     >
-      <Box sx={{ position: "relative", px: 3, pt: 2, pb: 1 }}>
-        <DialogTitle
-          component="h2"
-          id="card-dialog-title"
-          sx={{ p: 0, fontSize: 19, fontWeight: 700, letterSpacing: -0.5 }}
-        >
-          {card ? "Edit task" : "Create a new task"}
-        </DialogTitle>
-        <Typography variant="body2" color="text.secondary">
-          in list: {list?.name ?? "Unknown list"}
-        </Typography>
-        <IconButton
-          size="small"
-          onClick={onClose}
-          aria-label="Close dialog"
-          sx={{ position: "absolute", top: 16, right: 16 }}
-        >
-          <X size={18} />
-        </IconButton>
-      </Box>
-      <DialogContent sx={{ display: "grid", gap: 2, alignContent: "start" }}>
+      {hasHeader && (
+        <Box sx={{ position: "relative", px: 2, pt: 1.5, pb: 1, borderBottom: "1px solid", borderColor: "divider" }}>
+          <DialogTitle
+            component="h2"
+            id="card-dialog-title"
+            sx={{ p: 0, fontSize: 19, fontWeight: 700, letterSpacing: -0.5 }}
+          >
+            {card ? "Edit task" : "Create a new task"}
+          </DialogTitle>
+          <Typography variant="body2" color="text.secondary">
+            in list: {list?.name ?? "Unknown list"}
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={onClose}
+            aria-label="Close dialog"
+            sx={{
+              position: "absolute",
+              top: 8,
+              right: 16,
+              width: 36,
+              height: 36,
+              border: "1px solid",
+              borderColor: "error.main",
+              color: "error.main",
+              borderRadius: 1.5,
+              "&:hover": {
+                bgcolor: "rgba(211,47,47,.08)",
+                borderColor: "error.dark"
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      )}
+      <DialogContent sx={{ display: "grid", gap: 1.5, px: 2, py: 1.5, alignContent: "start" }}>
         {formError && (
           <Alert severity="error" role="alert">
             {formError}
@@ -637,8 +689,9 @@ function CardDialogBody({
             variant="text"
             aria-expanded={managingLabels}
             onClick={() => setManagingLabels((value) => !value)}
+            sx={{ mt: 0.5, ml: -1, height: 32 }}
           >
-            {managingLabels ? "Hide label manager" : "Manage labels"}
+            {managingLabels ? "Hide manager" : "Manage labels"}
           </Button>
           {managingLabels && <LabelManager labels={current.labels} />}
         </Box>
@@ -738,11 +791,18 @@ function CardDialogBody({
             />
             <Button
               variant="outlined"
-              startIcon={<Plus size={16} />}
+              startIcon={<AddIcon />}
               onClick={addChecklistFromField}
-              sx={{ whiteSpace: "nowrap", height: 40 }}
+              sx={{
+                whiteSpace: "nowrap",
+                height: 40,
+                "&:focus-visible": {
+                  outline: (theme) => `2px solid ${theme.palette.primary.main}`,
+                  outlineOffset: 1
+                }
+              }}
             >
-              Add a checklist
+              Checklist
             </Button>
           </Stack>
         </Box>
@@ -789,18 +849,33 @@ function CardDialogBody({
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button variant="text" color="inherit" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          variant="contained"
-          startIcon={<Plus size={17} />}
+      {hasFooter && (
+        <DialogActions
+          sx={{
+            px: 2,
+            py: 0.75,
+            gap: 0.5,
+            borderTop: "1px solid",
+            borderColor: "divider"
+          }}
         >
-          {card ? "Save changes" : "Create task"}
-        </Button>
-      </DialogActions>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={onClose}
+            sx={{ minWidth: 88 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            sx={{ minWidth: 128 }}
+          >
+            {card ? "Save changes" : "Create task"}
+          </Button>
+        </DialogActions>
+      )}
     </Box>
   );
 }
@@ -810,13 +885,17 @@ export function CardDialog({
   card,
   listId,
   onClose,
-  onExited
+  onExited,
+  hasHeader = true,
+  hasFooter = true
 }: {
   open: boolean;
   card: Card | null;
   listId: string;
   onClose: () => void;
   onExited?: () => void;
+  hasHeader?: boolean;
+  hasFooter?: boolean;
 }) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
@@ -830,11 +909,17 @@ export function CardDialog({
       fullScreen={fullScreen}
       aria-labelledby="card-dialog-title"
       slotProps={{
-        paper: { sx: { borderRadius: fullScreen ? 0 : 3.5, p: 0.5 } },
+        paper: { sx: { borderRadius: fullScreen ? 0 : 3.5, p: 0 } },
         transition: { onExited }
       }}
     >
-      <CardDialogBody card={card} listId={listId} onClose={onClose} />
+      <CardDialogBody
+        card={card}
+        listId={listId}
+        onClose={onClose}
+        hasHeader={hasHeader}
+        hasFooter={hasFooter}
+      />
     </Dialog>
   );
 }

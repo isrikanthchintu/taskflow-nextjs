@@ -1,10 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { Box, Button, Stack, Typography } from "@mui/material";
-import { LayoutDashboard } from "lucide-react";
-import { BannerStack } from "@/components/banner-stack";
+import { Box, Drawer, Typography } from "@mui/material";
 import { BoardsMenu } from "@/components/boards-menu";
 import { CardDialog } from "@/components/card-dialog";
 import { CommandMenu, type Command } from "@/components/command-menu";
@@ -24,15 +21,12 @@ import { ShortcutHelp } from "@/components/shortcut-help";
 import { SwimlaneView } from "@/components/swimlane-view";
 import { TopBar } from "@/components/top-bar";
 import { UndoSnackbar } from "@/components/undo-snackbar";
+import { ArchiveView } from "@/components/archive-view";
+import { SettingsPage } from "@/components/settings-page";
 import { useBoard } from "@/hooks/use-board";
 import { useHotkeys } from "@/hooks/use-hotkeys";
 import { checkLimits } from "@/lib/board-ops";
-import {
-  activeCards,
-  activeLists,
-  filterCards,
-  listCounts
-} from "@/lib/board-query";
+import { activeCards, activeLists, filterCards } from "@/lib/board-query";
 import { getBackground } from "@/lib/theme-presets";
 import type { Card } from "@/types/board";
 
@@ -50,12 +44,6 @@ const visuallyHidden = {
   clip: "rect(0 0 0 0)",
   whiteSpace: "nowrap"
 } as const;
-
-function openLink(testId: string, fallbackPath: string) {
-  const link = document.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
-  if (link) link.click();
-  else window.location.assign(fallbackPath);
-}
 
 export function TaskDashboard() {
   const {
@@ -82,14 +70,14 @@ export function TaskDashboard() {
     card: null,
     listId: ""
   });
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const boardsButtonRef = useRef<HTMLButtonElement | null>(null);
   const transferRef = useRef<ImportExportHandle>(null);
   const mainRef = useRef<HTMLElement | null>(null);
 
   const lists = useMemo(() => activeLists(board), [board]);
-  const counts = useMemo(() => listCounts(board), [board]);
-  const limits = useMemo(() => checkLimits(data), [data]);
   const fullView = useMemo<BoardView>(
     () => ({ ...view, filter: { ...view.filter, text: query } }),
     [view, query]
@@ -98,7 +86,11 @@ export function TaskDashboard() {
     () => filterCards(activeCards(board), fullView.filter, lists).length,
     [board, fullView, lists]
   );
-  const background = getBackground(board.backgroundId);
+  const background = getBackground(
+    board.backgroundId,
+    data.settings.customBackgroundStart,
+    data.settings.customBackgroundEnd
+  );
   const canAdd = !dataError && lists.length > 0;
   const filtering = viewActiveCount(view) > 0 || query.trim() !== "";
 
@@ -174,12 +166,12 @@ export function TaskDashboard() {
     {
       id: "open-settings",
       label: "Open settings",
-      run: () => openLink("top-bar-settings", "/settings")
+      run: () => setSettingsOpen(true)
     },
     {
       id: "open-archive",
       label: "Open archive",
-      run: () => openLink("archive-link", "/archive")
+      run: () => setArchiveOpen(true)
     },
     { id: "toggle-filters", label: "Toggle filters panel", run: toggleFilters },
     {
@@ -277,17 +269,10 @@ export function TaskDashboard() {
             onExport={() => transferRef.current?.exportBoard()}
             onImport={() => transferRef.current?.startImport()}
             onOpenRules={() => setRulesOpen(true)}
+            onOpenArchive={() => setArchiveOpen(true)}
           />
         }
-      />
-
-      <BannerStack
-        dataError={dataError}
-        saveError={saveError}
-        notice={notice}
-        limits={limits}
-        onDismissSaveError={dismissSaveError}
-        onDismissNotice={dismissNotice}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <Box
@@ -303,72 +288,7 @@ export function TaskDashboard() {
           outline: "none"
         }}
       >
-        <Stack
-          direction="row"
-          sx={{
-            flexShrink: 0,
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 2.5,
-            py: 1.5,
-            flexWrap: "wrap",
-            gap: 1
-          }}
-        >
-          <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-            <LayoutDashboard size={20} aria-hidden="true" />
-            <Typography component="h1" sx={{ fontSize: 20, fontWeight: 700 }}>
-              {board.name}
-            </Typography>
-            <Button
-              component={Link}
-              href="/archive"
-              size="small"
-              data-testid="archive-link"
-              sx={{
-                color: "#fff",
-                bgcolor: "rgba(0,0,0,.32)",
-                "&:hover": { bgcolor: "rgba(0,0,0,.45)", transform: "none" }
-              }}
-            >
-              Archive
-            </Button>
-          </Stack>
-
-          <Box
-            component="section"
-            role="region"
-            aria-label="Task summary"
-            sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}
-          >
-            <StatPill label="Total tasks" value={counts.total} />
-            {counts.perList.map((entry) => (
-              <StatPill
-                key={entry.listId}
-                label={entry.name}
-                value={entry.count}
-                testId={`count-pill-${entry.listId}`}
-              />
-            ))}
-          </Box>
-        </Stack>
-
-        <Box
-          role="status"
-          aria-live="polite"
-          data-testid="match-live-region"
-          sx={visuallyHidden}
-        >
-          {filtering && !filterAnchor
-            ? `${matchCount} ${matchCount === 1 ? "card matches" : "cards match"}`
-            : ""}
-        </Box>
-
-        {!isReady ? (
-          <Typography sx={{ color: "#eaf4fb", textAlign: "center", py: 6 }}>
-            Loading your tasks...
-          </Typography>
-        ) : fullView.swimlane ? (
+        {fullView.swimlane ? (
           <SwimlaneView board={board} view={fullView} onEditTask={openEdit} />
         ) : (
           <KanbanBoard
@@ -412,6 +332,42 @@ export function TaskDashboard() {
       <ImportExportDialog ref={transferRef} />
 
       <UndoSnackbar entry={undoEntry} onUndo={undo} />
+
+      <Drawer
+        anchor="right"
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        ModalProps={{ keepMounted: false }}
+        sx={{
+          "& .MuiDrawer-paper": {
+            width: { xs: "100%", sm: 420 },
+            height: "100vh",
+            bgcolor: "background.paper",
+            boxShadow: "-12px 0 32px rgba(9,30,66,.18)",
+            overflow: "hidden"
+          }
+        }}
+      >
+        <ArchiveView embedded onClose={() => setArchiveOpen(false)} />
+      </Drawer>
+
+      <Drawer
+        anchor="right"
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        ModalProps={{ keepMounted: false }}
+        sx={{
+          "& .MuiDrawer-paper": {
+            width: { xs: "100%", md: 520 },
+            height: "100vh",
+            bgcolor: "background.paper",
+            boxShadow: "-12px 0 32px rgba(9,30,66,.18)",
+            overflow: "hidden"
+          }
+        }}
+      >
+        <SettingsPage embedded onClose={() => setSettingsOpen(false)} />
+      </Drawer>
     </Box>
   );
 }

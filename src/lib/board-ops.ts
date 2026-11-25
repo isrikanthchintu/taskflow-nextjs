@@ -15,7 +15,7 @@ import type {
 } from "@/types/board";
 
 export type OpResult =
-  { ok: true; data: AppData; id?: string } | { ok: false; error: string };
+  { ok: true; data: AppData; id?: string } | { ok: false, error: string };
 
 export interface LimitStatus {
   count: number;
@@ -921,7 +921,10 @@ export function setBoardBackground(
   boardId: string,
   backgroundId: string
 ): OpResult {
-  if (!BACKGROUND_PRESETS.some((preset) => preset.id === backgroundId))
+  if (
+    backgroundId !== "custom" &&
+    !BACKGROUND_PRESETS.some((preset) => preset.id === backgroundId)
+  )
     return failure("That background is not available.");
   return editBoard(data, boardId, (board) => ({ ...board, backgroundId }));
 }

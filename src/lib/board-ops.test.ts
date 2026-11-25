@@ -557,7 +557,7 @@ describe("boards", () => {
       mode: "dark",
       accentId: "green",
       density: "compact",
-      corners: "rounded"
+      corners: "sm"
     });
     expect(next.boards).toBe(data.boards);
   });

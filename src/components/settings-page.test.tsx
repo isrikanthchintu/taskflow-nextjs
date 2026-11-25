@@ -50,11 +50,11 @@ describe("SettingsPage", () => {
     const { user } = await renderReady();
 
     await user.click(screen.getByRole("radio", { name: "Compact" }));
-    await user.click(screen.getByRole("radio", { name: "Very rounded" }));
+    await user.click(screen.getByRole("radio", { name: "Extra large" }));
 
     expect(storedData().settings).toMatchObject({
       density: "compact",
-      corners: "very-rounded"
+      corners: "xl"
     });
   });
 

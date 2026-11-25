@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import {
   Button,
   Dialog,
@@ -14,7 +13,8 @@ import {
   MenuItem,
   TextField
 } from "@mui/material";
-import { Check, ChevronDown } from "lucide-react";
+import CheckIcon from "@mui/icons-material/Check";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useBoard } from "@/hooks/use-board";
 import { LIMITS } from "@/lib/board-ops";
 import type { OpResult } from "@/lib/board-ops";
@@ -97,7 +97,8 @@ export function BoardsMenu({
   buttonRef,
   onExport,
   onImport,
-  onOpenRules
+  onOpenRules,
+  onOpenArchive
 }: {
   anchorEl: HTMLElement | null;
   onOpen: (anchor: HTMLElement) => void;
@@ -106,9 +107,9 @@ export function BoardsMenu({
   onExport: () => void;
   onImport: () => void;
   onOpenRules?: () => void;
+  onOpenArchive?: () => void;
 }) {
-  const { data, board, createBoard, renameBoard, switchBoard, archiveBoard } =
-    useBoard();
+  const { data, board, createBoard, renameBoard, switchBoard } = useBoard();
   const ownRef = useRef<HTMLButtonElement | null>(null);
   const [dialog, setDialog] = useState<NameDialogKind | null>(null);
   const [dialogKey, setDialogKey] = useState(0);
@@ -142,12 +143,13 @@ export function BoardsMenu({
         aria-haspopup="menu"
         aria-expanded={anchorEl ? "true" : undefined}
         aria-label={`Boards menu, ${board.name} is open`}
-        endIcon={<ChevronDown size={16} aria-hidden="true" />}
+        endIcon={<KeyboardArrowDownIcon />}
         onClick={(event) => onOpen(event.currentTarget)}
         sx={{
-          minHeight: 44,
+          height: 36,
+          minHeight: 36,
           minWidth: 44,
-          maxWidth: { xs: 140, sm: 240 },
+          px: 1.5,
           bgcolor: "rgba(255,255,255,.18)",
           fontSize: 14,
           fontWeight: 600,
@@ -182,7 +184,7 @@ export function BoardsMenu({
           >
             <ListItemText>{item.name}</ListItemText>
             {item.id === data.activeBoardId && (
-              <Check size={16} aria-hidden="true" />
+              <CheckIcon fontSize="small" />
             )}
           </MenuItem>
         ))}
@@ -226,25 +228,14 @@ export function BoardsMenu({
             <ListItemText>Rules for this board</ListItemText>
           </MenuItem>
         )}
-        <MenuItem
-          disabled={lastBoard}
-          data-testid="boards-menu-archive-board"
-          onClick={() => run(() => archiveBoard(board.id))}
-        >
-          <ListItemText
-            secondary={lastBoard ? "Keep at least one board open" : null}
+        {onOpenArchive && (
+          <MenuItem
+            data-testid="boards-menu-archive-link"
+            onClick={() => run(onOpenArchive)}
           >
-            Archive this board
-          </ListItemText>
-        </MenuItem>
-        <MenuItem
-          component={Link}
-          href="/archive"
-          data-testid="boards-menu-archive-link"
-          onClick={onClose}
-        >
-          <ListItemText>Archive</ListItemText>
-        </MenuItem>
+            <ListItemText>Archive</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
       <NameDialog
         key={dialogKey}

@@ -42,7 +42,7 @@ export function resolveMode(
 
 export function createAppTheme(settings: Settings, systemDark = false) {
   const mode = resolveMode(settings, systemDark);
-  const accent = getAccent(settings.accentId)[mode];
+  const accent = getAccent(settings.accentId, settings.customAccentColor)[mode];
   const palette = getPalette(mode);
   const density = DENSITY_TOKENS[settings.density];
   const corners = CORNER_TOKENS[settings.corners];
@@ -115,6 +115,11 @@ export function createAppTheme(settings: Settings, systemDark = false) {
             textTransform: "none",
             fontWeight: 700,
             borderRadius: corners.button,
+            "&:focus-visible": {
+              outline: "2px solid",
+              outlineColor: "primary.main",
+              outlineOffset: 2
+            },
             transition:
               "background-color .2s ease, box-shadow .2s ease, transform .15s ease"
           },
@@ -134,7 +139,23 @@ export function createAppTheme(settings: Settings, systemDark = false) {
         }
       },
       MuiDialog: {
-        defaultProps: { transitionDuration: { enter: 260, exit: 180 } }
+        defaultProps: { transitionDuration: { enter: 260, exit: 180 } },
+        styleOverrides: {
+          paper: {
+            borderRadius: corners.list,
+            boxShadow: "0 18px 48px rgba(9,30,66,.24)",
+            border: "1px solid rgba(9,30,66,.08)"
+          }
+        }
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            borderRadius: corners.button,
+            boxShadow: "0 12px 32px rgba(9,30,66,.22)",
+            border: "1px solid rgba(9,30,66,.10)"
+          }
+        }
       }
     }
   });

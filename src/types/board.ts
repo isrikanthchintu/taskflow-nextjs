@@ -1,13 +1,16 @@
 export type Priority = "low" | "medium" | "high";
 export type ThemeMode = "light" | "dark" | "system";
 export type Density = "compact" | "comfortable";
-export type Corners = "square" | "rounded" | "very-rounded";
+export type Corners = "xs" | "sm" | "md" | "xl";
 
 export interface Settings {
   mode: ThemeMode;
   accentId: string;
   density: Density;
   corners: Corners;
+  customAccentColor?: string;
+  customBackgroundStart?: string;
+  customBackgroundEnd?: string;
 }
 
 export interface Label {

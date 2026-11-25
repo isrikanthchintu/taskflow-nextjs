@@ -65,10 +65,9 @@ describe("presets", () => {
     expect(DENSITY_TOKENS.compact.cardGap).toBeLessThan(
       DENSITY_TOKENS.comfortable.cardGap
     );
-    expect(CORNER_TOKENS.square.card).toBe(0);
-    expect(CORNER_TOKENS["very-rounded"].card).toBeGreaterThan(
-      CORNER_TOKENS.rounded.card
-    );
+    expect(CORNER_TOKENS.xs.card).toBeLessThan(CORNER_TOKENS.sm.card);
+    expect(CORNER_TOKENS.sm.card).toBeLessThan(CORNER_TOKENS.md.card);
+    expect(CORNER_TOKENS.md.card).toBeLessThan(CORNER_TOKENS.xl.card);
   });
 
   it("FR5.1 returns the light and dark palettes", () => {

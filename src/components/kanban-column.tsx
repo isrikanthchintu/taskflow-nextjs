@@ -15,7 +15,8 @@ import {
   Typography
 } from "@mui/material";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
-import { Plus, TriangleAlert } from "lucide-react";
+import AddIcon from "@mui/icons-material/Add";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { ListMenu } from "@/components/list-menu";
 import { TaskCard } from "@/components/task-card";
 import type { CardGroup } from "@/lib/board-query";
@@ -249,7 +250,7 @@ export function KanbanColumn({
                   : theme.board.textSecondary
             }}
           >
-            {isOverLimit && <TriangleAlert size={14} aria-hidden="true" />}
+            {isOverLimit && <WarningAmberIcon fontSize="small" aria-hidden="true" />}
             <span>{limitText}</span>
           </Stack>
         )}
@@ -271,9 +272,10 @@ export function KanbanColumn({
         ref={setDropRef}
         sx={{
           flex: "1 1 auto",
-          overflowY: "auto",
+          overflowY: "hidden",
           px: 1,
-          pb: 0.5,
+          pt: 1,
+          pb: 1,
           minHeight: 12
         }}
       >
@@ -326,15 +328,20 @@ export function KanbanColumn({
             fullWidth
             disabled={disabled}
             data-testid={`kanban-column-${list.id}-add-card`}
-            startIcon={<Plus size={16} />}
+            startIcon={<AddIcon />}
             onClick={() => onAddCard(list.id)}
             sx={{
               justifyContent: "flex-start",
+              alignItems: "center",
+              height: 40,
+              minHeight: 40,
+              lineHeight: "40px",
               color: (theme) => theme.board.textSecondary,
               fontWeight: 500,
               fontSize: 14,
               px: 1.25,
-              py: 0.75,
+              py: 0,
+              pb: 0.75,
               "&:hover": { bgcolor: "rgba(9,30,66,.14)", transform: "none" }
             }}
           >

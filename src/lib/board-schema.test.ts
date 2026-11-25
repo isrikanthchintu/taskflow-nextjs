@@ -44,7 +44,7 @@ describe("board-schema factories", () => {
       mode: "system",
       accentId: "blue",
       density: "comfortable",
-      corners: "rounded"
+      corners: "md"
     });
   });
 
@@ -214,6 +214,16 @@ describe("validateAppData", () => {
     };
     broken.boards[0].rules[0].action.kind = "explode";
     expect(validateAppData(broken).ok).toBe(false);
+  });
+
+  it("migrates legacy corner settings to the XS-SM-MD-XL scale", () => {
+    const data = clone(createDefaultData()) as unknown as {
+      settings: { corners: string };
+    };
+    data.settings.corners = "rounded";
+    const result = validateAppData(data);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.settings.corners).toBe("md");
   });
 });
 

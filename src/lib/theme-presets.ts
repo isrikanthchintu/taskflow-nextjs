@@ -40,13 +40,16 @@ export const DEFAULT_ACCENT_ID = "blue";
 export const DEFAULT_BACKGROUND_ID = "blue-gradient";
 export const THEME_MODES: ThemeMode[] = ["light", "dark", "system"];
 export const DENSITIES: Density[] = ["comfortable", "compact"];
-export const CORNER_OPTIONS: Corners[] = ["square", "rounded", "very-rounded"];
+export const CORNER_OPTIONS: Corners[] = ["xs", "sm", "md", "xl"];
 
 export const DEFAULT_SETTINGS: Settings = {
   mode: "system",
   accentId: DEFAULT_ACCENT_ID,
   density: "comfortable",
-  corners: "rounded"
+  corners: "md",
+  customAccentColor: "#0079bf",
+  customBackgroundStart: "#0079bf",
+  customBackgroundEnd: "#026aa7"
 };
 
 export const ACCENT_PRESETS: AccentPreset[] = [
@@ -143,21 +146,53 @@ export const DARK_PALETTE: ModePalette = {
 };
 
 export const DENSITY_TOKENS: Record<Density, DensityTokens> = {
-  comfortable: { cardPadding: 12, cardGap: 8, listHeaderHeight: 44 },
-  compact: { cardPadding: 8, cardGap: 4, listHeaderHeight: 36 }
+  comfortable: { cardPadding: 16, cardGap: 8, listHeaderHeight: 48 },
+  compact: { cardPadding: 12, cardGap: 8, listHeaderHeight: 40 }
 };
 
 export const CORNER_TOKENS: Record<Corners, CornerTokens> = {
-  square: { card: 0, list: 0, button: 0 },
-  rounded: { card: 8, list: 12, button: 8 },
-  "very-rounded": { card: 16, list: 20, button: 999 }
+  xs: { card: 4, list: 6, button: 4 },
+  sm: { card: 8, list: 10, button: 8 },
+  md: { card: 12, list: 16, button: 12 },
+  xl: { card: 20, list: 24, button: 20 }
 };
 
-export function getAccent(id: string): AccentPreset {
+export function getAccent(id: string, customColor?: string): AccentPreset {
+  if (id === "custom") {
+    const color = /^#[0-9a-f]{6}$/i.test(customColor ?? "")
+      ? customColor!
+      : "#0079bf";
+    return {
+      id: "custom",
+      name: "Custom",
+      light: { main: color, contrastText: "#ffffff" },
+      dark: { main: color, contrastText: "#0b1220" }
+    };
+  }
   return ACCENT_PRESETS.find((accent) => accent.id === id) ?? ACCENT_PRESETS[0];
 }
 
-export function getBackground(id: string): BackgroundPreset {
+export function getBackground(
+  id: string,
+  customStart?: string,
+  customEnd?: string
+): BackgroundPreset {
+  if (id === "custom") {
+    const start = /^#[0-9a-f]{6}$/i.test(customStart ?? "")
+      ? customStart!
+      : "#0079bf";
+    const end = /^#[0-9a-f]{6}$/i.test(customEnd ?? "")
+      ? customEnd!
+      : start;
+    return {
+      id: "custom",
+      name: "Custom",
+      kind: start === end ? "solid" : "gradient",
+      colors: [start, end],
+      textColor: "#ffffff",
+      css: start === end ? start : `linear-gradient(135deg, ${start}, ${end})`
+    };
+  }
   return (
     BACKGROUND_PRESETS.find((background) => background.id === id) ??
     BACKGROUND_PRESETS[0]

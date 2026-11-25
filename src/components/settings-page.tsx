@@ -6,14 +6,17 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
+  IconButton,
   Paper,
   Radio,
   RadioGroup,
   Stack,
+  TextField,
   Typography
 } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
-import { ArrowLeft } from "lucide-react";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CloseIcon from "@mui/icons-material/Close";
 import { BannerStack } from "@/components/banner-stack";
 import { useBoard } from "@/hooks/use-board";
 import {
@@ -39,9 +42,10 @@ const DENSITY_LABELS: Record<Density, string> = {
 };
 
 const CORNER_LABELS: Record<Corners, string> = {
-  square: "Square",
-  rounded: "Rounded",
-  "very-rounded": "Very rounded"
+  xs: "Extra small",
+  sm: "Small",
+  md: "Medium",
+  xl: "Extra large"
 };
 
 function Swatch({
@@ -95,7 +99,13 @@ function SettingsGroup({
   );
 }
 
-export function SettingsPage() {
+export function SettingsPage({
+  embedded = false,
+  onClose
+}: {
+  embedded?: boolean;
+  onClose?: () => void;
+} = {}) {
   const {
     data,
     board,
@@ -109,39 +119,53 @@ export function SettingsPage() {
     setBoardBackground
   } = useBoard();
   const { settings } = data;
-  const accent = getAccent(settings.accentId);
-  const background = getBackground(board.backgroundId);
+  const accent = getAccent(settings.accentId, settings.customAccentColor);
+  const background = getBackground(
+    board.backgroundId,
+    settings.customBackgroundStart,
+    settings.customBackgroundEnd
+  );
   const locked = Boolean(dataError);
 
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        height: embedded ? "100%" : "100vh",
         bgcolor: "background.default",
-        color: "text.primary"
+        color: "text.primary",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden"
       }}
     >
       <Box
         component="header"
-        sx={{ display: "flex", alignItems: "center", gap: 2, px: 3, py: 2 }}
+        sx={{ display: "flex", alignItems: "center", gap: 2, px: 2, py: 1.5 }}
       >
-        <Link
-          href="/"
-          data-testid="back-to-board"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            color: "inherit",
-            fontWeight: 700
-          }}
-        >
-          <ArrowLeft size={18} aria-hidden="true" />
-          Back to board
-        </Link>
+        {!embedded && (
+          <Link
+            href="/"
+            data-testid="back-to-board"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              color: "inherit",
+              fontWeight: 700
+            }}
+          >
+            <ArrowBackIcon />
+            Back to board
+          </Link>
+        )}
         <Typography component="h1" sx={{ fontSize: 24, fontWeight: 700 }}>
           Settings
         </Typography>
+        {embedded && (
+          <IconButton onClick={onClose} sx={{ ml: "auto" }} aria-label="Close settings">
+            <CloseIcon />
+          </IconButton>
+        )}
       </Box>
 
       <BannerStack
@@ -156,10 +180,12 @@ export function SettingsPage() {
         component="main"
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          gridTemplateColumns: embedded ? "1fr" : { xs: "1fr", md: "1fr 1fr" },
           gap: 4,
-          px: 3,
-          pb: 6
+          px: embedded ? 2 : 3,
+          pb: 6,
+          flex: 1,
+          overflowY: "auto"
         }}
       >
         {!isReady ? (
@@ -256,6 +282,31 @@ export function SettingsPage() {
                 <Typography variant="body2" color="text.secondary">
                   Selected: {accent.name}
                 </Typography>
+
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  sx={{ alignItems: "center", mt: 1.5 }}
+                >
+                  <TextField
+                    type="color"
+                    label="Custom accent RGB"
+                    size="small"
+                    disabled={locked}
+                    value={settings.customAccentColor ?? "#0079bf"}
+                    onChange={(event) =>
+                      updateSettings({
+                        accentId: "custom",
+                        customAccentColor: event.target.value
+                      })
+                    }
+                    slotProps={{ htmlInput: { "aria-label": "Custom accent RGB" } }}
+                    sx={{ width: 92 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    {settings.customAccentColor ?? "#0079bf"}
+                  </Typography>
+                </Stack>
               </SettingsGroup>
 
               <SettingsGroup legend="Density">
@@ -295,24 +346,44 @@ export function SettingsPage() {
                   onChange={(event) =>
                     updateSettings({ corners: event.target.value as Corners })
                   }
+                  sx={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(72px, 1fr))", gap: 1 }}
                 >
-                  {CORNER_OPTIONS.map((corners) => (
-                    <FormControlLabel
-                      key={corners}
-                      value={corners}
-                      disabled={locked}
-                      control={
-                        <Radio
-                          slotProps={{
-                            input: {
-                              "data-testid": `setting-corners-${corners}`
-                            } as React.InputHTMLAttributes<HTMLInputElement>
-                          }}
-                        />
-                      }
-                      label={CORNER_LABELS[corners]}
-                    />
-                  ))}
+                  {CORNER_OPTIONS.map((corners) => {
+                    const radius =
+                      corners === "xs" ? 4 : corners === "sm" ? 8 : corners === "md" ? 12 : 20;
+                    return (
+                      <FormControlLabel
+                        key={corners}
+                        value={corners}
+                        disabled={locked}
+                        sx={{ m: 0 }}
+                        control={
+                          <Radio
+                            slotProps={{
+                              input: {
+                                "data-testid": `setting-corners-${corners}`
+                              } as React.InputHTMLAttributes<HTMLInputElement>
+                            }}
+                          />
+                        }
+                        label={
+                          <Stack spacing={0.75} sx={{ alignItems: "center", py: 0.5 }}>
+                            <Box
+                              sx={{
+                                width: 44,
+                                height: 44,
+                                border: "1px solid",
+                                borderColor: "text.secondary",
+                                borderRadius: `${radius}px`,
+                                bgcolor: "background.default"
+                              }}
+                            />
+                            <Typography variant="caption">{CORNER_LABELS[corners]}</Typography>
+                          </Stack>
+                        }
+                      />
+                    );
+                  })}
                 </RadioGroup>
               </SettingsGroup>
 
@@ -364,6 +435,37 @@ export function SettingsPage() {
                 <Typography variant="body2" color="text.secondary">
                   Selected: {background.name}
                 </Typography>
+
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  sx={{ alignItems: "center", mt: 1.5 }}
+                >
+                  <TextField
+                    type="color"
+                    label="Start RGB"
+                    size="small"
+                    disabled={locked}
+                    value={settings.customBackgroundStart ?? "#0079bf"}
+                    onChange={(event) => {
+                      setBoardBackground("custom");
+                      updateSettings({ customBackgroundStart: event.target.value });
+                    }}
+                    sx={{ width: 92 }}
+                  />
+                  <TextField
+                    type="color"
+                    label="End RGB"
+                    size="small"
+                    disabled={locked}
+                    value={settings.customBackgroundEnd ?? "#026aa7"}
+                    onChange={(event) => {
+                      setBoardBackground("custom");
+                      updateSettings({ customBackgroundEnd: event.target.value });
+                    }}
+                    sx={{ width: 92 }}
+                  />
+                </Stack>
               </SettingsGroup>
             </Box>
 

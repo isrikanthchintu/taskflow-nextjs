@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Avatar,
   Box,
@@ -15,17 +14,14 @@ import {
   Typography,
   useMediaQuery
 } from "@mui/material";
-import {
-  Check,
-  Command as CommandIcon,
-  Menu as MenuIcon,
-  Plus,
-  Search,
-  Settings,
-  SlidersHorizontal
-} from "lucide-react";
+import SearchIcon from "@mui/icons-material/Search";
+import MenuIcon from "@mui/icons-material/Menu";
+import AddIcon from "@mui/icons-material/Add";
+import SettingsIcon from "@mui/icons-material/Settings";
+import TuneIcon from "@mui/icons-material/Tune";
+import TerminalIcon from "@mui/icons-material/Terminal";
 
-export const TOP_BAR_HEIGHT = 48;
+export const TOP_BAR_HEIGHT = 64;
 
 export function TopBar({
   boardName,
@@ -37,7 +33,8 @@ export function TopBar({
   newTaskDisabled = false,
   boardsMenu,
   searchInputRef,
-  onOpenCommands
+  onOpenCommands,
+  onOpenSettings
 }: {
   boardName: string;
   query: string;
@@ -49,6 +46,7 @@ export function TopBar({
   boardsMenu?: React.ReactNode;
   searchInputRef?: React.Ref<HTMLInputElement>;
   onOpenCommands?: () => void;
+  onOpenSettings?: () => void;
 }) {
   const compact = useMediaQuery("(max-width:767.95px)");
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -64,34 +62,28 @@ export function TopBar({
         flexShrink: 0,
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 1,
-        px: 2,
+        gap: 2,
+        px: { xs: 2, md: 3 },
         bgcolor: "rgba(0,0,0,.32)",
         color: "#fff"
       }}
     >
       <Stack
         direction="row"
-        spacing={1.25}
+        spacing={{ xs: 1, md: 2 }}
         sx={{ alignItems: "center", minWidth: 0 }}
       >
         <Box
+          component="img"
+          src="/taskflow-logo.svg"
+          alt="TaskFlow"
           sx={{
-            width: 28,
-            height: 28,
-            borderRadius: 1.5,
-            bgcolor: "#fff",
-            color: "#172b4d",
-            display: "grid",
-            placeItems: "center",
+            width: 36,
+            height: 36,
+            objectFit: "contain",
             flexShrink: 0
           }}
-        >
-          <Check size={17} strokeWidth={3} />
-        </Box>
-        <Typography sx={{ fontWeight: 800, fontSize: 18, letterSpacing: -0.4 }}>
-          TaskFlow
-        </Typography>
+        />
         {boardsMenu ?? (
           <Typography
             data-testid="top-bar-board-name"
@@ -124,23 +116,25 @@ export function TopBar({
           input: {
             startAdornment: (
               <InputAdornment position="start">
-                <Search size={16} color="#e3f1fa" />
+                <SearchIcon fontSize="small" color="action" />
               </InputAdornment>
             )
           }
         }}
         sx={{
-          width: { xs: 120, sm: 260, md: 420 },
+          width: { xs: 120, sm: 280, md: 440 },
+          flex: { xs: "1 1 auto", md: "0 1 440px" },
+          mx: { md: 1 },
           "& .MuiOutlinedInput-root": {
-            height: compact ? 44 : 34,
+            height: compact ? 44 : 40,
             bgcolor: "rgba(255,255,255,.22)",
             color: "#fff",
             borderRadius: 1.5,
             "& fieldset": { borderColor: "rgba(255,255,255,.55)" },
             "&:hover fieldset": { borderColor: "rgba(255,255,255,.8)" },
-            "&.Mui-focused": { bgcolor: "#fff", color: "#172b4d" },
-            "&.Mui-focused fieldset": { borderColor: "#4c9aff" },
-            "&.Mui-focused svg": { color: "#44546f" }
+            "&.Mui-focused": { bgcolor: "rgba(255,255,255,.30)", color: "#fff" },
+            "&.Mui-focused fieldset": { borderColor: "#fff", borderWidth: 1 },
+            "&.Mui-focused svg": { color: "#fff" }
           },
           input: {
             fontSize: 14,
@@ -159,7 +153,7 @@ export function TopBar({
             onClick={(event) => setMenuAnchor(event.currentTarget)}
             sx={{ width: 44, height: 44 }}
           >
-            <MenuIcon size={20} />
+            <MenuIcon fontSize="small" />
           </IconButton>
           <Menu
             anchorEl={menuAnchor}
@@ -199,7 +193,13 @@ export function TopBar({
                 Commands
               </MenuItem>
             )}
-            <MenuItem sx={{ minHeight: 44 }} component={Link} href="/settings">
+            <MenuItem
+              sx={{ minHeight: 44 }}
+              onClick={() => {
+                setMenuAnchor(null);
+                onOpenSettings?.();
+              }}
+            >
               Settings
             </MenuItem>
           </Menu>
@@ -207,17 +207,18 @@ export function TopBar({
       ) : (
         <Stack
           direction="row"
-          spacing={1.5}
+          spacing={1}
           sx={{ alignItems: "center", flexShrink: 0 }}
         >
           <Button
             variant="outlined"
             data-testid="top-bar-filter"
             aria-label={filterName}
-            startIcon={<SlidersHorizontal size={16} />}
+            startIcon={<TuneIcon fontSize="small" />}
             onClick={(event) => onOpenFilters(event.currentTarget)}
             sx={{
-              height: 32,
+              height: 36,
+              px: 1.75,
               fontSize: 14,
               color: "#fff",
               borderColor: "rgba(255,255,255,.6)",
@@ -233,10 +234,11 @@ export function TopBar({
           <Button
             variant="contained"
             disabled={newTaskDisabled}
-            startIcon={<Plus size={16} />}
+            startIcon={<AddIcon fontSize="small" />}
             onClick={onNewTask}
             sx={{
-              height: 32,
+              height: 36,
+              px: 1.75,
               fontSize: 14,
               bgcolor: "#fff",
               color: "#172b4d",
@@ -256,31 +258,34 @@ export function TopBar({
               data-testid="top-bar-commands"
               onClick={onOpenCommands}
               sx={{
+                width: 36,
+                height: 36,
                 "&:focus-visible": {
                   outline: "2px solid #fff",
                   outlineOffset: 2
                 }
               }}
             >
-              <CommandIcon size={20} />
+              <TerminalIcon fontSize="small" />
             </IconButton>
           )}
           <IconButton
-            component={Link}
-            href="/settings"
             color="inherit"
+            onClick={onOpenSettings}
             aria-label="Settings"
             data-testid="top-bar-settings"
             sx={{
+              width: 36,
+              height: 36,
               "&:focus-visible": { outline: "2px solid #fff", outlineOffset: 2 }
             }}
           >
-            <Settings size={20} />
+            <SettingsIcon fontSize="small" />
           </IconButton>
           <Avatar
             sx={{
-              width: 30,
-              height: 30,
+              width: 32,
+              height: 32,
               fontSize: 12,
               fontWeight: 800,
               bgcolor: "#f1e6dc",

@@ -6,12 +6,14 @@ import {
   Alert,
   Box,
   Button,
+  IconButton,
   Stack,
   Tab,
   Tabs,
   Typography
 } from "@mui/material";
-import { ArrowLeft } from "lucide-react";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CloseIcon from "@mui/icons-material/Close";
 import { BannerStack } from "@/components/banner-stack";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { UndoSnackbar } from "@/components/undo-snackbar";
@@ -26,7 +28,13 @@ function cardsWord(count: number): string {
   return count === 1 ? "card" : "cards";
 }
 
-export function ArchiveView() {
+export function ArchiveView({
+  embedded = false,
+  onClose
+}: {
+  embedded?: boolean;
+  onClose?: () => void;
+} = {}) {
   const {
     board,
     isReady,
@@ -69,32 +77,46 @@ export function ArchiveView() {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        height: embedded ? "100%" : "100vh",
         bgcolor: "background.default",
-        color: "text.primary"
+        color: "text.primary",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden"
       }}
     >
       <Box
         component="header"
-        sx={{ display: "flex", alignItems: "center", gap: 2, px: 3, py: 2 }}
+        sx={{ display: "flex", alignItems: "center", gap: 2, px: 2, py: 1.5 }}
       >
-        <Link
-          href="/"
-          data-testid="back-to-board"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            color: "inherit",
-            fontWeight: 700
-          }}
-        >
-          <ArrowLeft size={18} aria-hidden="true" />
-          Back to board
-        </Link>
+        {!embedded && (
+          <Link
+            href="/"
+            data-testid="back-to-board"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              color: "inherit",
+              fontWeight: 700
+            }}
+          >
+            <ArrowBackIcon />
+            Back to board
+          </Link>
+        )}
         <Typography component="h1" sx={{ fontSize: 24, fontWeight: 700 }}>
           Archive
         </Typography>
+        {embedded && (
+          <IconButton
+            onClick={onClose}
+            sx={{ ml: "auto" }}
+            aria-label="Close archive"
+          >
+            <CloseIcon />
+          </IconButton>
+        )}
       </Box>
 
       <BannerStack
@@ -105,7 +127,10 @@ export function ArchiveView() {
         onDismissNotice={dismissNotice}
       />
 
-      <Box component="main" sx={{ px: 3, pb: 6 }}>
+      <Box
+        component="main"
+        sx={{ px: embedded ? 2 : 3, pb: 6, flex: 1, overflowY: "auto" }}
+      >
         <Tabs
           value={tab}
           onChange={(_event, value) => setTab(value)}

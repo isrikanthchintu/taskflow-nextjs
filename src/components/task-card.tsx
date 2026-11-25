@@ -132,8 +132,9 @@ export function TaskCard({
             `0 1px 1px rgba(9,30,66,.25), 0 0 0 2px ${theme.board.ring}`
         },
         "&:focus-visible": {
-          outline: (theme) => `2px solid ${theme.board.ring}`,
-          outlineOffset: 2
+          outline: "none",
+          boxShadow: (theme) =>
+            `0 1px 1px rgba(9,30,66,.25), inset 0 0 0 3px ${theme.board.ring}`
         },
         "&:hover .card-drag-handle": { opacity: 1 },
         "&:focus-within .card-drag-handle": { opacity: 1 }
@@ -191,7 +192,7 @@ export function TaskCard({
         </Box>
       )}
 
-      <Box sx={{ display: "flex", mb: 0.75 }}>
+      <Box sx={{ display: "flex", mb: 1 }}>
         <Box
           component="span"
           sx={{

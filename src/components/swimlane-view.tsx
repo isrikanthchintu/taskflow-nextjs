@@ -43,7 +43,7 @@ export function SwimlaneView({
   return (
     <Box
       data-testid="swimlane-view"
-      sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 2, pb: 2 }}
+      sx={{ flex: 1, minHeight: 0, overflow: "hidden", px: 2, pb: 2 }}
     >
       <Typography
         role="status"

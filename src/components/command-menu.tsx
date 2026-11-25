@@ -8,7 +8,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { Search } from "lucide-react";
+import SearchIcon from "@mui/icons-material/Search";
 
 export interface Command {
   id: string;
@@ -115,7 +115,7 @@ export function CommandMenu({
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={16} aria-hidden="true" />
+                  <SearchIcon />
                 </InputAdornment>
               )
             }

@@ -7,6 +7,7 @@ function setup(overrides: Partial<React.ComponentProps<typeof TopBar>> = {}) {
   const onQueryChange = jest.fn();
   const onOpenFilters = jest.fn();
   const onNewTask = jest.fn();
+  const onOpenSettings = jest.fn();
   renderWithTheme(
     <TopBar
       boardName="Work board"
@@ -15,10 +16,11 @@ function setup(overrides: Partial<React.ComponentProps<typeof TopBar>> = {}) {
       activeFilterCount={0}
       onOpenFilters={onOpenFilters}
       onNewTask={onNewTask}
+      onOpenSettings={onOpenSettings}
       {...overrides}
     />
   );
-  return { onQueryChange, onOpenFilters, onNewTask };
+  return { onQueryChange, onOpenFilters, onNewTask, onOpenSettings };
 }
 
 describe("TopBar", () => {
@@ -108,13 +110,13 @@ describe("TopBar", () => {
     expect(screen.getByRole("button", { name: /new task/i })).toBeDisabled();
   });
 
-  it("FR5.5 links the gear to the settings page and sits in a banner landmark", () => {
-    setup();
+  it("FR5.5 opens Settings from the gear and sits in a banner landmark", async () => {
+    const onOpenSettings = jest.fn();
+    setup({ onOpenSettings });
 
-    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
-      "href",
-      "/settings"
-    );
+    await userEvent.setup().click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("banner")).toBeInTheDocument();
   });
 });

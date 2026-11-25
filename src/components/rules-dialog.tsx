@@ -15,7 +15,8 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { Trash2, TriangleAlert } from "lucide-react";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useBoard } from "@/hooks/use-board";
 import { ruleBroken } from "@/lib/board-rules";
@@ -200,7 +201,7 @@ export function RulesDialog({
                         data-testid={`rule-${rule.id}-delete`}
                         onClick={() => setPendingDelete(rule)}
                       >
-                        <Trash2 size={18} />
+                        <DeleteOutlineIcon fontSize="small" />
                       </IconButton>
                     </Stack>
                     <Typography variant="body2">
@@ -220,7 +221,7 @@ export function RulesDialog({
                           fontSize: 13
                         }}
                       >
-                        <TriangleAlert size={14} aria-hidden="true" />
+                        <WarningAmberIcon fontSize="small" aria-hidden="true" />
                         <span>{broken}</span>
                       </Stack>
                     )}

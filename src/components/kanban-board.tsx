@@ -26,7 +26,8 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { LayoutList, Plus } from "lucide-react";
+import ViewListIcon from "@mui/icons-material/ViewList";
+import AddIcon from "@mui/icons-material/Add";
 import {
   baseCardId,
   columnDroppableId,
@@ -183,7 +184,7 @@ function AddListTile({
       <Button
         data-testid="add-list-tile"
         disabled={disabled || limitReached}
-        startIcon={<Plus size={16} />}
+        startIcon={<AddIcon />}
         onClick={() => setOpen(true)}
         sx={{
           flex: "0 0 auto",
@@ -358,7 +359,7 @@ export function KanbanBoard({
         }}
       >
         <Stack spacing={1.5} sx={{ alignItems: "center" }}>
-          <LayoutList size={36} aria-hidden="true" />
+          <ViewListIcon sx={{ fontSize: 36 }} aria-hidden="true" />
           <Typography component="p" sx={{ fontSize: 18, fontWeight: 700 }}>
             This board has no lists yet
           </Typography>
@@ -383,14 +384,14 @@ export function KanbanBoard({
         sx={{
           display: "flex",
           alignItems: "flex-start",
-          gap: 1.5,
+          gap: 2,
           flex: 1,
           minHeight: 0,
           overflowX: "auto",
           overflowY: "hidden",
           px: 2,
           pb: 2,
-          pt: 0.5
+          pt: 2
         }}
       >
         <SortableContext

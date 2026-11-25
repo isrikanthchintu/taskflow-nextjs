@@ -364,9 +364,30 @@ function validateSettings(value: unknown): ValidationResult<Settings> {
   if (!isString(value.accentId)) return fail("The accent is not valid.");
   if (!DENSITIES.includes(value.density as Settings["density"]))
     return fail("The density is not valid.");
-  if (!CORNER_OPTIONS.includes(value.corners as Settings["corners"]))
+  const cornerMigration: Record<string, Settings["corners"]> = {
+    square: "xs",
+    rounded: "md",
+    "very-rounded": "xl"
+  };
+  const normalizedCorners =
+    typeof value.corners === "string"
+      ? (cornerMigration[value.corners] ?? value.corners)
+      : value.corners;
+  if (!CORNER_OPTIONS.includes(normalizedCorners as Settings["corners"]))
     return fail("The corner style is not valid.");
-  return { ok: true, data: value as unknown as Settings };
+  if (value.customAccentColor !== undefined && !isString(value.customAccentColor))
+    return fail("The custom accent color is not valid.");
+  if (value.customBackgroundStart !== undefined && !isString(value.customBackgroundStart))
+    return fail("The custom background start is not valid.");
+  if (value.customBackgroundEnd !== undefined && !isString(value.customBackgroundEnd))
+    return fail("The custom background end is not valid.");
+  return {
+    ok: true,
+    data: {
+      ...(value as unknown as Settings),
+      corners: normalizedCorners as Settings["corners"]
+    }
+  };
 }
 
 export function validateAppData(value: unknown): ValidationResult<AppData> {

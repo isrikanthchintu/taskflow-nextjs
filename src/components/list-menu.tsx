@@ -13,7 +13,7 @@ import {
   MenuItem,
   TextField
 } from "@mui/material";
-import { MoreHorizontal } from "lucide-react";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import { useBoard } from "@/hooks/use-board";
 import type { List } from "@/types/board";
 
@@ -107,7 +107,7 @@ export function ListMenu({
           }
         }}
       >
-        <MoreHorizontal size={18} />
+        <MoreHorizIcon fontSize="small" />
       </IconButton>
       <Menu
         anchorEl={anchor}

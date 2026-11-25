@@ -9,10 +9,39 @@ import { createAppTheme } from "@/theme";
 export function ThemeRegistry({ children }: { children: React.ReactNode }) {
   const { data } = useBoard();
   const systemDark = useMediaQuery("(prefers-color-scheme: dark)");
-  const { mode, accentId, density, corners } = data.settings;
+  const {
+    mode,
+    accentId,
+    density,
+    corners,
+    customAccentColor,
+    customBackgroundStart,
+    customBackgroundEnd,
+  } = data.settings;
   const theme = useMemo(
-    () => createAppTheme({ mode, accentId, density, corners }, systemDark),
-    [mode, accentId, density, corners, systemDark]
+    () =>
+      createAppTheme(
+        {
+          mode,
+          accentId,
+          density,
+          corners,
+          customAccentColor,
+          customBackgroundStart,
+          customBackgroundEnd,
+        },
+        systemDark
+      ),
+    [
+      mode,
+      accentId,
+      density,
+      corners,
+      customAccentColor,
+      customBackgroundStart,
+      customBackgroundEnd,
+      systemDark,
+    ]
   );
 
   return (
