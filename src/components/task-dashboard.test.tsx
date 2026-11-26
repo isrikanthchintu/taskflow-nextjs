@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { TaskDashboard } from "@/components/task-dashboard";
 import { DATA_KEY, LEGACY_KEY } from "@/lib/board-storage";
 import { createDefaultData, newCard } from "@/lib/board-schema";
-import { renderWithTheme, seedData, storedData } from "@/test-utils";
+import { renderApp, seedData, storedData } from "@/test-utils";
 
 function pillValue(label: string): string {
   const summary = screen.getByRole("region", { name: "Task summary" });
@@ -14,7 +14,7 @@ function pillValue(label: string): string {
 
 async function renderReadyDashboard() {
   const user = userEvent.setup();
-  renderWithTheme(<TaskDashboard />);
+  renderApp(<TaskDashboard />);
   await waitFor(() =>
     expect(screen.queryByText("Loading your tasks...")).not.toBeInTheDocument()
   );

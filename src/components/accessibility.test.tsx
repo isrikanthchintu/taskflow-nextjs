@@ -2,11 +2,11 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SettingsPage } from "@/components/settings-page";
 import { TaskDashboard } from "@/components/task-dashboard";
-import { TopBar } from "@/components/top-bar";
+import { BoardToolbar } from "@/components/board-toolbar";
 import { DEFAULT_SETTINGS } from "@/lib/theme-presets";
 import { createAppTheme } from "@/theme";
 import { createDefaultData, newCard } from "@/lib/board-schema";
-import { renderWithTheme, seedData, storedData } from "@/test-utils";
+import { renderApp, renderWithTheme, seedData, storedData } from "@/test-utils";
 
 jest.setTimeout(90000);
 
@@ -14,7 +14,7 @@ type User = ReturnType<typeof userEvent.setup>;
 
 async function renderDashboard() {
   const user = userEvent.setup();
-  const view = renderWithTheme(<TaskDashboard />);
+  const view = renderApp(<TaskDashboard />);
   await waitFor(() =>
     expect(screen.queryByText("Loading your tasks...")).not.toBeInTheDocument()
   );
@@ -78,10 +78,8 @@ describe("Accessibility pass", () => {
     })) as unknown as typeof window.matchMedia;
     try {
       renderWithTheme(
-        <TopBar
+        <BoardToolbar
           boardName="Work"
-          query=""
-          onQueryChange={jest.fn()}
           activeFilterCount={0}
           onOpenFilters={jest.fn()}
           onNewTask={jest.fn()}
