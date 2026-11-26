@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BannerStack, limitMessages } from "@/components/banner-stack";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -46,6 +46,54 @@ describe("BannerStack", () => {
     expect(banner).toHaveAttribute("role", "alert");
     expect(banner).toHaveTextContent("Your saved data could not be read");
     expect(within(banner).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("offers backup and confirmed reset on the unreadable-data alert", async () => {
+    const user = userEvent.setup();
+    const onBackupData = jest.fn(() => null);
+    const onResetData = jest.fn(() => ({ ok: true }));
+    setup({
+      dataError: "Your saved data could not be read.",
+      onBackupData,
+      onResetData
+    });
+
+    await user.click(screen.getByRole("button", { name: "Download backup" }));
+    expect(onBackupData).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByText("There is no saved data to download.")
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Reset saved data" }));
+    expect(onResetData).not.toHaveBeenCalled();
+    await user.click(screen.getByTestId("confirm-cancel"));
+    expect(onResetData).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reset saved data" }));
+    await user.click(screen.getByTestId("confirm-accept"));
+    expect(onResetData).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows why a reset failed", async () => {
+    const user = userEvent.setup();
+    setup({
+      dataError: "Your saved data could not be read.",
+      onBackupData: () => null,
+      onResetData: () => ({
+        ok: false,
+        error: "Browser storage could not be cleared."
+      })
+    });
+
+    await user.click(screen.getByRole("button", { name: "Reset saved data" }));
+    await user.click(screen.getByTestId("confirm-accept"));
+
+    expect(
+      await screen.findByText("Browser storage could not be cleared.")
+    ).toBeInTheDocument();
   });
 
   it("FR1.4 shows a failed save as an alert that can be dismissed", async () => {

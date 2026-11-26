@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Alert, Button, Stack } from "@mui/material";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { downloadTextFile } from "@/components/import-export-dialog";
 import type { LimitReport } from "@/lib/board-ops";
 
 interface BannerSpec {
@@ -9,6 +12,7 @@ interface BannerSpec {
   role: "alert" | "status";
   text: string;
   onDismiss?: () => void;
+  actions?: React.ReactNode;
 }
 
 const LIMIT_TEXT = {
@@ -45,7 +49,9 @@ export function BannerStack({
   notice,
   limits = null,
   onDismissSaveError,
-  onDismissNotice
+  onDismissNotice,
+  onBackupData,
+  onResetData
 }: {
   dataError: string | null;
   saveError: string | null;
@@ -53,14 +59,57 @@ export function BannerStack({
   limits?: LimitReport | null;
   onDismissSaveError: () => void;
   onDismissNotice: () => void;
+  onBackupData?: () => { fileName: string; text: string } | null;
+  onResetData?: () => { ok: boolean; error?: string };
 }) {
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [recoveryStatus, setRecoveryStatus] = useState("");
+  const canRecover = Boolean(onBackupData && onResetData);
+
+  function backup() {
+    const file = onBackupData?.();
+    if (!file) {
+      setRecoveryStatus("There is no saved data to download.");
+      return;
+    }
+    downloadTextFile(file.fileName, file.text);
+    setRecoveryStatus(`Downloaded ${file.fileName}`);
+  }
+
+  function reset() {
+    const result = onResetData?.();
+    setConfirmReset(false);
+    if (result && !result.ok)
+      setRecoveryStatus(result.error ?? "Reset failed.");
+  }
+
   const banners: BannerSpec[] = [];
   if (dataError)
     banners.push({
       key: "data-error",
       severity: "error",
       role: "alert",
-      text: dataError
+      text: dataError,
+      actions: canRecover ? (
+        <>
+          <Button
+            color="inherit"
+            size="small"
+            onClick={backup}
+            data-testid="banner-data-error-backup"
+          >
+            Download backup
+          </Button>
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => setConfirmReset(true)}
+            data-testid="banner-data-error-reset"
+          >
+            Reset saved data
+          </Button>
+        </>
+      ) : undefined
     });
   if (saveError)
     banners.push({
@@ -107,12 +156,25 @@ export function BannerStack({
               >
                 Dismiss
               </Button>
-            ) : undefined
+            ) : (
+              banner.actions
+            )
           }
         >
           {banner.text}
+          {banner.key === "data-error" && recoveryStatus ? (
+            <div role="status">{recoveryStatus}</div>
+          ) : null}
         </Alert>
       ))}
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reset saved data?"
+        message="This permanently deletes everything stored in this browser for TaskFlow and starts with a fresh board. Download a backup first if you want to keep it."
+        confirmLabel="Reset saved data"
+        onConfirm={reset}
+        onCancel={() => setConfirmReset(false)}
+      />
     </Stack>
   );
 }

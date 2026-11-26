@@ -45,6 +45,8 @@ export function ArchiveView({
     undo,
     dismissNotice,
     dismissSaveError,
+    backupSavedData,
+    resetSavedData,
     restoreList,
     restoreCard,
     deleteArchivedList,
@@ -124,6 +126,8 @@ export function ArchiveView({
         saveError={saveError}
         notice={notice}
         onDismissSaveError={dismissSaveError}
+        onBackupData={backupSavedData}
+        onResetData={resetSavedData}
         onDismissNotice={dismissNotice}
       />
 

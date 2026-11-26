@@ -10,7 +10,9 @@ import {
 } from "@/lib/board-schema";
 import {
   DATA_KEY,
+  clearSavedData,
   readAppData,
+  readRawSavedData,
   writeAppData,
   type WriteResult
 } from "@/lib/board-storage";
@@ -347,6 +349,29 @@ function dismissSaveError() {
   setSnapshot({ saveError: null });
 }
 
+function backupSavedData(): { fileName: string; text: string } | null {
+  const text = readRawSavedData();
+  if (text === null) return null;
+  const stamp = new Date().toISOString().slice(0, 10);
+  return { fileName: `taskflow-backup-${stamp}.json`, text };
+}
+
+function resetSavedData(): ops.OpResult {
+  if (!snapshot.dataError) return failure("Your saved data is readable.");
+  if (!clearSavedData())
+    return failure("Browser storage could not be cleared.");
+  const starter = createStarterData();
+  setSnapshot({
+    data: starter,
+    isReady: true,
+    saveError: describeWrite(writeAppData(starter)),
+    dataError: null,
+    notice: null,
+    ...dropUndo()
+  });
+  return { ok: true, data: starter };
+}
+
 function unreadableMessage(reason: string): string {
   return `Your saved data could not be read, so nothing will be saved until it is fixed. ${reason}`;
 }
@@ -474,6 +499,8 @@ const actions = {
   importBoard,
   exportBoardFile,
   undo,
+  backupSavedData,
+  resetSavedData,
   dismissNotice,
   dismissSaveError
 };

@@ -107,6 +107,29 @@ export function writeAppData(data: AppData): WriteResult {
   }
 }
 
+export function readRawSavedData(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return (
+      window.localStorage.getItem(DATA_KEY) ??
+      window.localStorage.getItem(LEGACY_KEY)
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function clearSavedData(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    window.localStorage.removeItem(DATA_KEY);
+    window.localStorage.removeItem(LEGACY_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function readAppData(): ReadResult {
   if (typeof window === "undefined") return { status: "missing" };
 

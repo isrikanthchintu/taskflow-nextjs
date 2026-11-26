@@ -115,6 +115,8 @@ export function SettingsPage({
     notice,
     dismissNotice,
     dismissSaveError,
+    backupSavedData,
+    resetSavedData,
     updateSettings,
     setBoardBackground
   } = useBoard();
@@ -173,6 +175,8 @@ export function SettingsPage({
         saveError={saveError}
         notice={notice}
         onDismissSaveError={dismissSaveError}
+        onBackupData={backupSavedData}
+        onResetData={resetSavedData}
         onDismissNotice={dismissNotice}
       />
 
