@@ -13,6 +13,15 @@ A responsive task-management dashboard built with the Next.js App Router. It is 
 - Responsive layout for desktop and mobile
 - TypeScript types and reusable task hook
 
+## Repository layout
+
+```text
+frontend/   Next.js app (UI, localStorage mode, optional API mode)
+backend/    NestJS + MongoDB REST API (see backend/README.md)
+```
+
+Run all frontend commands from the `frontend/` folder.
+
 ## Requirements
 
 - Node.js 20.9 or later
@@ -26,6 +35,7 @@ A responsive task-management dashboard built with the Next.js App Router. It is 
 4. Install dependencies:
 
    ```bash
+   cd frontend
    pnpm install
    ```
 
@@ -50,7 +60,7 @@ pnpm start     # Run the production build
 ## Project structure
 
 ```text
-src/
+frontend/src/
   app/
     globals.css
     layout.tsx
