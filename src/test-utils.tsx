@@ -31,3 +31,12 @@ export function renderApp(
 ): RenderResult {
   return renderWithTheme(<AppShell>{ui}</AppShell>, settings);
 }
+
+export function routerMock() {
+  return (globalThis as unknown as { __mockRouter: Record<string, jest.Mock> })
+    .__mockRouter;
+}
+
+export function setMockPathname(pathname: string | null): void {
+  Object.assign(globalThis, { __mockPathname: pathname });
+}

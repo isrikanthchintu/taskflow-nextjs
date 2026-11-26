@@ -1,5 +1,5 @@
-import { TaskDashboard } from "@/components/task-dashboard";
+import { HomePage } from "@/components/home-page";
 
-export default function HomePage() {
-  return <TaskDashboard />;
+export default function HomeRoute() {
+  return <HomePage />;
 }
