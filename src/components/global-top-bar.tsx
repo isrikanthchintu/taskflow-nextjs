@@ -28,10 +28,11 @@ import HelpOutlinedIcon from "@mui/icons-material/HelpOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SearchIcon from "@mui/icons-material/Search";
 import { AccountMenu } from "@/components/account-menu";
-import { CreateBoardFlow } from "@/components/create-board-dialog";
+import { NameDialog } from "@/components/boards-menu";
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 import { useGlobalSearch } from "@/components/search-context";
 import { ShortcutHelp } from "@/components/shortcut-help";
+import { useBoard } from "@/hooks/use-board";
 import { useSeenIndicator } from "@/hooks/use-seen-indicator";
 import {
   ANNOUNCEMENTS,
@@ -61,11 +62,11 @@ interface ActivePopover {
 }
 
 export function variantForPath(pathname: string | null): TopBarVariant {
-  return pathname?.startsWith("/b/") ? "board" : "light";
+  return pathname === null || pathname === "/" ? "board" : "light";
 }
 
 const APP_LINKS = [
-  { label: "Home", href: "/" },
+  { label: "Board", href: "/" },
   { label: "Archive", href: "/archive" },
   { label: "Settings", href: "/settings" }
 ];
@@ -97,6 +98,7 @@ export function GlobalTopBar({
   const collapsedSearch = useMediaQuery("(max-width:1023.95px)");
   const mobile = useMediaQuery("(max-width:599.95px)");
   const { query, setQuery, inputRef, registerFocusHandler } = useGlobalSearch();
+  const { createBoard } = useBoard();
   const { unreadCount } = useUnreadNotifications(onSessionExpired);
   const announcements = useSeenIndicator(
     "announcements",
@@ -743,9 +745,11 @@ export function GlobalTopBar({
         onToast={showToast}
       />
 
-      <CreateBoardFlow
+      <NameDialog
         key={`board-${boardDialogKey}`}
-        open={boardDialogOpen}
+        kind={boardDialogOpen ? "create" : null}
+        initial=""
+        onSubmit={createBoard}
         onClose={() => setBoardDialogOpen(false)}
         onExited={() => createButtonRef.current?.focus()}
       />
