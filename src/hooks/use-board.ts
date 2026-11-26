@@ -518,3 +518,7 @@ export function useBoard() {
 
   return { ...state, board, ...actions };
 }
+
+export function currentSaveError(): string | null {
+  return snapshot.saveError;
+}

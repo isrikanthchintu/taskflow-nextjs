@@ -8,10 +8,8 @@ import {
   Badge,
   Box,
   Button,
-  Divider,
   IconButton,
   InputAdornment,
-  ListItemText,
   Menu,
   MenuItem,
   Popover,
@@ -29,7 +27,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import HelpOutlinedIcon from "@mui/icons-material/HelpOutlined";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SearchIcon from "@mui/icons-material/Search";
+import { AccountMenu } from "@/components/account-menu";
 import { NameDialog } from "@/components/boards-menu";
+import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 import { useGlobalSearch } from "@/components/search-context";
 import { ShortcutHelp } from "@/components/shortcut-help";
 import { useBoard } from "@/hooks/use-board";
@@ -41,6 +41,7 @@ import {
   HELP_VERSION
 } from "@/lib/announcements";
 import { CURRENT_USER, type CurrentUser } from "@/lib/current-user";
+import { ACCOUNT_URL, FEATURES, type FeatureFlags } from "@/lib/feature-flags";
 import { formatBadge, useUnreadNotifications } from "@/lib/notifications-store";
 import { redirectToLogin } from "@/lib/session";
 
@@ -49,6 +50,11 @@ export const TOP_BAR_HEIGHT = 48;
 export type TopBarVariant = "board" | "light";
 export type PopoverId =
   "apps" | "create" | "announcements" | "notifications" | "help" | "account";
+
+interface Toast {
+  message: string;
+  retry?: () => void;
+}
 
 interface ActivePopover {
   id: PopoverId;
@@ -70,13 +76,21 @@ export function GlobalTopBar({
   variant,
   onSessionExpired = redirectToLogin,
   onStartFromTemplate,
-  onCreateWorkspace
+  onCreateWorkspace,
+  onSwitchAccounts,
+  onLogout,
+  features = FEATURES,
+  accountUrl = ACCOUNT_URL
 }: {
   user?: CurrentUser;
   variant?: TopBarVariant;
   onSessionExpired?: () => void;
   onStartFromTemplate?: () => void;
   onCreateWorkspace?: () => void;
+  onSwitchAccounts?: () => void;
+  onLogout?: () => void;
+  features?: FeatureFlags;
+  accountUrl?: string;
 }) {
   const pathname = usePathname();
   const resolved = variant ?? variantForPath(pathname);
@@ -99,7 +113,9 @@ export function GlobalTopBar({
   const [boardDialogKey, setBoardDialogKey] = useState(0);
   const [boardDialogOpen, setBoardDialogOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [workspaceDialogOpen, setWorkspaceDialogOpen] = useState(false);
+  const [workspaceDialogKey, setWorkspaceDialogKey] = useState(0);
   const searchButtonRef = useRef<HTMLButtonElement | null>(null);
   const createButtonRef = useRef<HTMLButtonElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -150,10 +166,25 @@ export function GlobalTopBar({
     setBoardDialogOpen(true);
   }
 
+  function showToast(message: string, retry?: () => void) {
+    setToast({ message, retry });
+  }
+
   function unavailable(message: string, handler?: () => void) {
     setActive(null);
     if (handler) handler();
-    else setNotice(message);
+    else showToast(message);
+  }
+
+  function openWorkspaceFlow() {
+    returnFocusRef.current = active?.anchor ?? createButtonRef.current ?? null;
+    setActive(null);
+    if (onCreateWorkspace) {
+      onCreateWorkspace();
+      return;
+    }
+    setWorkspaceDialogKey((key) => key + 1);
+    setWorkspaceDialogOpen(true);
   }
 
   function closeSearch() {
@@ -592,12 +623,7 @@ export function GlobalTopBar({
         >
           Start with a Template
         </MenuItem>
-        <MenuItem
-          data-testid="create-workspace"
-          onClick={() =>
-            unavailable("Workspaces are not available yet", onCreateWorkspace)
-          }
-        >
+        <MenuItem data-testid="create-workspace" onClick={openWorkspaceFlow}>
           Create Workspace
         </MenuItem>
       </Menu>
@@ -689,53 +715,35 @@ export function GlobalTopBar({
         </MenuItem>
       </Menu>
 
-      <Menu
-        anchorEl={activeId === "account" ? active?.anchor : null}
+      <AccountMenu
+        anchorEl={activeId === "account" ? (active?.anchor ?? null) : null}
         open={activeId === "account"}
         onClose={close}
-        slotProps={{ list: { "aria-label": "Account" } }}
-      >
-        <Box sx={{ px: 2, py: 1, maxWidth: 260 }}>
-          <Typography
-            variant="body2"
-            noWrap
-            data-testid="account-menu-name"
-            sx={{ fontWeight: 700 }}
-          >
-            {user.name}
-          </Typography>
-        </Box>
-        <Divider component="li" />
-        {mobile && (
-          <MenuItem
-            data-testid="account-announcements"
-            onClick={() => switchTo("announcements")}
-          >
-            <ListItemText>
-              {announcements.unseen ? "What's new (new)" : "What's new"}
-            </ListItemText>
-          </MenuItem>
-        )}
-        {mobile && (
-          <MenuItem data-testid="account-help" onClick={() => switchTo("help")}>
-            <ListItemText>{help.unseen ? "Help (new)" : "Help"}</ListItemText>
-          </MenuItem>
-        )}
-        <MenuItem
-          component={Link}
-          href="/settings"
-          onClick={() => setActive(null)}
-        >
-          Settings
-        </MenuItem>
-        <MenuItem
-          component={Link}
-          href="/archive"
-          onClick={() => setActive(null)}
-        >
-          Archive
-        </MenuItem>
-      </Menu>
+        user={user}
+        features={features}
+        accountUrl={accountUrl}
+        extraItems={
+          mobile
+            ? [
+                {
+                  id: "announcements",
+                  label: announcements.unseen
+                    ? "What's new (new)"
+                    : "What's new",
+                  onSelect: () => switchTo("announcements")
+                }
+              ]
+            : []
+        }
+        onOpenShortcuts={() => {
+          returnFocusRef.current = active?.anchor ?? null;
+          setShortcutsOpen(true);
+        }}
+        onCreateWorkspace={openWorkspaceFlow}
+        onSwitchAccounts={onSwitchAccounts}
+        onLogout={onLogout}
+        onToast={showToast}
+      />
 
       <NameDialog
         key={boardDialogKey}
@@ -754,11 +762,39 @@ export function GlobalTopBar({
         }}
       />
 
+      <CreateWorkspaceDialog
+        key={workspaceDialogKey}
+        open={workspaceDialogOpen}
+        onClose={() => setWorkspaceDialogOpen(false)}
+        onExited={() => returnFocusRef.current?.focus()}
+        onCreated={(workspace) =>
+          showToast(`Workspace "${workspace.name}" created`)
+        }
+      />
+
       <Snackbar
-        open={notice !== null}
-        autoHideDuration={4000}
-        message={notice}
-        onClose={() => setNotice(null)}
+        open={toast !== null}
+        autoHideDuration={6000}
+        message={toast?.message}
+        onClose={(_event, reason) => {
+          if (reason !== "clickaway") setToast(null);
+        }}
+        action={
+          toast?.retry ? (
+            <Button
+              color="inherit"
+              size="small"
+              data-testid="toast-retry"
+              onClick={() => {
+                const retry = toast.retry;
+                setToast(null);
+                retry?.();
+              }}
+            >
+              Retry
+            </Button>
+          ) : undefined
+        }
       />
     </>
   );
