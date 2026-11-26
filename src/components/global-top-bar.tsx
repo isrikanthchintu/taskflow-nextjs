@@ -746,7 +746,7 @@ export function GlobalTopBar({
       />
 
       <NameDialog
-        key={boardDialogKey}
+        key={`board-${boardDialogKey}`}
         kind={boardDialogOpen ? "create" : null}
         initial=""
         onSubmit={createBoard}
@@ -763,7 +763,7 @@ export function GlobalTopBar({
       />
 
       <CreateWorkspaceDialog
-        key={workspaceDialogKey}
+        key={`workspace-${workspaceDialogKey}`}
         open={workspaceDialogOpen}
         onClose={() => setWorkspaceDialogOpen(false)}
         onExited={() => returnFocusRef.current?.focus()}
