@@ -21,7 +21,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: firstPaintTheme }} />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <ThemeRegistry>
           <AppShell>{children}</AppShell>
         </ThemeRegistry>

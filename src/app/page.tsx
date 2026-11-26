@@ -1,5 +1,5 @@
-import { HomePage } from "@/components/home-page";
+import { HomeEntry } from "@/components/app-entries";
 
 export default function HomeRoute() {
-  return <HomePage />;
+  return <HomeEntry />;
 }

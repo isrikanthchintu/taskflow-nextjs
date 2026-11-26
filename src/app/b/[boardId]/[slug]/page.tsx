@@ -1,4 +1,4 @@
-import { BoardPage } from "@/components/board-page";
+import { BoardEntry } from "@/components/app-entries";
 
 export default async function BoardRoute({
   params
@@ -6,5 +6,5 @@ export default async function BoardRoute({
   params: Promise<{ boardId: string; slug: string }>;
 }) {
   const { boardId } = await params;
-  return <BoardPage boardId={boardId} />;
+  return <BoardEntry boardId={boardId} />;
 }
