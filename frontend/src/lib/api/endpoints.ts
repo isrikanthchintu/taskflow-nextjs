@@ -75,7 +75,7 @@ export const api = {
     apiRequest<ApiWorkspace>("/workspaces", { method: "POST", body: input }),
   workspaceBoards: (workspaceId: string, closed = false) =>
     apiRequest<ApiBoardSummary[]>(`/workspaces/${workspaceId}/boards${closed ? "?closed=true" : ""}`),
-  createBoard: (input: { workspaceId: string; name: string; visibility?: BoardVisibility }) =>
+  createBoard: (input: { workspaceId: string; name: string; visibility?: BoardVisibility; background?: string }) =>
     apiRequest<ApiBoardSummary>("/boards", { method: "POST", body: input }),
   board: (boardId: string) => apiRequest<ApiBoard>(`/boards/${boardId}`),
   recordView: (boardId: string) => apiRequest<unknown>(`/boards/${boardId}/views`, { method: "POST" }),

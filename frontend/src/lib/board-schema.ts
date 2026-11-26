@@ -56,7 +56,14 @@ export function buildId(source: RandomSource | undefined): string {
   ].join("-");
 }
 
+let idFactory: (() => string) | null = null;
+
+export function setIdFactory(factory: (() => string) | null): void {
+  idFactory = factory;
+}
+
 export function newId(): string {
+  if (idFactory) return idFactory();
   return buildId(typeof crypto === "undefined" ? undefined : crypto);
 }
 
