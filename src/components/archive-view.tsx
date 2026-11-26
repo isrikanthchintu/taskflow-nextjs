@@ -1,5 +1,6 @@
 "use client";
 
+import { TOP_BAR_HEIGHT } from "@/components/global-top-bar";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -79,7 +80,7 @@ export function ArchiveView({
   return (
     <Box
       sx={{
-        height: embedded ? "100%" : "100vh",
+        height: embedded ? "100%" : `calc(100vh - ${TOP_BAR_HEIGHT}px)`,
         bgcolor: "background.default",
         color: "text.primary",
         display: "flex",

@@ -20,7 +20,9 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { RulesDialog } from "@/components/rules-dialog";
 import { ShortcutHelp } from "@/components/shortcut-help";
 import { SwimlaneView } from "@/components/swimlane-view";
-import { TopBar } from "@/components/top-bar";
+import { BoardToolbar } from "@/components/board-toolbar";
+import { TOP_BAR_HEIGHT } from "@/components/global-top-bar";
+import { useGlobalSearch } from "@/components/search-context";
 import { UndoSnackbar } from "@/components/undo-snackbar";
 import { ArchiveView } from "@/components/archive-view";
 import { SettingsPage } from "@/components/settings-page";
@@ -37,15 +39,6 @@ interface DialogState {
   listId: string;
 }
 
-const visuallyHidden = {
-  position: "absolute",
-  width: 1,
-  height: 1,
-  overflow: "hidden",
-  clip: "rect(0 0 0 0)",
-  whiteSpace: "nowrap"
-} as const;
-
 export function TaskDashboard() {
   const {
     data,
@@ -61,7 +54,7 @@ export function TaskDashboard() {
     backupSavedData,
     resetSavedData
   } = useBoard();
-  const [query, setQuery] = useState("");
+  const { query, focusSearch } = useGlobalSearch();
   const [view, setView] = useState<BoardView>(EMPTY_VIEW);
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const [boardsAnchor, setBoardsAnchor] = useState<HTMLElement | null>(null);
@@ -75,7 +68,6 @@ export function TaskDashboard() {
   });
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const searchRef = useRef<HTMLInputElement | null>(null);
   const boardsButtonRef = useRef<HTMLButtonElement | null>(null);
   const transferRef = useRef<ImportExportHandle>(null);
   const mainRef = useRef<HTMLElement | null>(null);
@@ -122,10 +114,6 @@ export function TaskDashboard() {
     document
       .querySelector<HTMLElement>('[data-testid="add-list-tile"]')
       ?.click();
-  }
-
-  function focusSearch() {
-    searchRef.current?.focus();
   }
 
   function openBoardsMenu() {
@@ -217,6 +205,8 @@ export function TaskDashboard() {
     <Box
       sx={{
         height: "100vh",
+        boxSizing: "border-box",
+        pt: `${TOP_BAR_HEIGHT}px`,
         display: "flex",
         flexDirection: "column",
         background: background.css,
@@ -224,45 +214,12 @@ export function TaskDashboard() {
         overflow: "hidden"
       }}
     >
-      <Box
-        component="a"
-        href="#board-main"
-        data-testid="skip-link"
-        onClick={(event: React.MouseEvent) => {
-          event.preventDefault();
-          mainRef.current?.focus();
-        }}
-        sx={{
-          ...visuallyHidden,
-          "&:focus": {
-            position: "fixed",
-            top: 8,
-            left: 8,
-            zIndex: 2000,
-            width: "auto",
-            height: "auto",
-            clip: "auto",
-            p: 1.5,
-            bgcolor: "#fff",
-            color: "#172b4d",
-            fontWeight: 700,
-            borderRadius: 1,
-            outline: "2px solid #0c66e4"
-          }
-        }}
-      >
-        Skip to board
-      </Box>
-
-      <TopBar
+      <BoardToolbar
         boardName={board.name}
-        query={query}
-        onQueryChange={setQuery}
         activeFilterCount={viewActiveCount(view)}
         onOpenFilters={setFilterAnchor}
         onNewTask={() => openCreate()}
         newTaskDisabled={!canAdd}
-        searchInputRef={searchRef}
         onOpenCommands={() => setCommandsOpen(true)}
         boardsMenu={
           <BoardsMenu
@@ -276,7 +233,6 @@ export function TaskDashboard() {
             onOpenArchive={() => setArchiveOpen(true)}
           />
         }
-        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <BannerStack

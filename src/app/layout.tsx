@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DATA_KEY } from "@/lib/board-storage";
 import { DARK_PALETTE, LIGHT_PALETTE } from "@/lib/theme-presets";
+import { AppShell } from "@/components/app-shell";
 import { ThemeRegistry } from "@/theme-registry";
 import "./globals.css";
 
@@ -21,7 +22,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: firstPaintTheme }} />
       </head>
       <body>
-        <ThemeRegistry>{children}</ThemeRegistry>
+        <ThemeRegistry>
+          <AppShell>{children}</AppShell>
+        </ThemeRegistry>
       </body>
     </html>
   );

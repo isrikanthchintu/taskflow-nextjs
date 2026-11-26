@@ -1,29 +1,26 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { TopBar } from "@/components/top-bar";
+import { BoardToolbar } from "@/components/board-toolbar";
 import { renderWithTheme } from "@/test-utils";
 
-function setup(overrides: Partial<React.ComponentProps<typeof TopBar>> = {}) {
-  const onQueryChange = jest.fn();
+function setup(
+  overrides: Partial<React.ComponentProps<typeof BoardToolbar>> = {}
+) {
   const onOpenFilters = jest.fn();
   const onNewTask = jest.fn();
-  const onOpenSettings = jest.fn();
   renderWithTheme(
-    <TopBar
+    <BoardToolbar
       boardName="Work board"
-      query=""
-      onQueryChange={onQueryChange}
       activeFilterCount={0}
       onOpenFilters={onOpenFilters}
       onNewTask={onNewTask}
-      onOpenSettings={onOpenSettings}
       {...overrides}
     />
   );
-  return { onQueryChange, onOpenFilters, onNewTask, onOpenSettings };
+  return { onOpenFilters, onNewTask };
 }
 
-describe("TopBar", () => {
+describe("BoardToolbar", () => {
   it("FR7.2 shows the open board's name as plain text", () => {
     setup();
 
@@ -49,24 +46,6 @@ describe("TopBar", () => {
     );
 
     expect(onOpenCommands).toHaveBeenCalledTimes(1);
-  });
-
-  it("NFR3 hands the search input to the page so the slash shortcut can focus it", () => {
-    const ref = { current: null as HTMLInputElement | null };
-    setup({ searchInputRef: ref });
-
-    expect(ref.current).toBe(
-      screen.getByRole("textbox", { name: "Search tasks" })
-    );
-  });
-
-  it("FR4.1 keeps the search labelled Search tasks and reports typing", async () => {
-    const user = userEvent.setup();
-    const { onQueryChange } = setup();
-
-    await user.type(screen.getByRole("textbox", { name: "Search tasks" }), "r");
-
-    expect(onQueryChange).toHaveBeenCalledWith("r");
   });
 
   it("FR4.1 names the Filter button with the number of active filters", () => {
@@ -110,13 +89,9 @@ describe("TopBar", () => {
     expect(screen.getByRole("button", { name: /new task/i })).toBeDisabled();
   });
 
-  it("FR5.5 opens Settings from the gear and sits in a banner landmark", async () => {
-    const onOpenSettings = jest.fn();
-    setup({ onOpenSettings });
+  it("keeps the board toolbar out of the banner landmark so the global bar owns it", () => {
+    setup();
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "Settings" }));
-
-    expect(onOpenSettings).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
   });
 });

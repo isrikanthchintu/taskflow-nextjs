@@ -1,3 +1,4 @@
+import { AppShell } from "@/components/app-shell";
 import { render, type RenderResult } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { DATA_KEY, readAppData } from "@/lib/board-storage";
@@ -22,4 +23,11 @@ export function storedData(): AppData {
   const result = readAppData();
   if (result.status !== "ok") throw new Error("No readable stored data");
   return result.data;
+}
+
+export function renderApp(
+  ui: React.ReactElement,
+  settings: Settings = DEFAULT_SETTINGS
+): RenderResult {
+  return renderWithTheme(<AppShell>{ui}</AppShell>, settings);
 }

@@ -19,9 +19,9 @@ import { useBoard } from "@/hooks/use-board";
 import { LIMITS } from "@/lib/board-ops";
 import type { OpResult } from "@/lib/board-ops";
 
-type NameDialogKind = "create" | "rename";
+export type NameDialogKind = "create" | "rename";
 
-function NameDialog({
+export function NameDialog({
   kind,
   initial,
   onSubmit,
