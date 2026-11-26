@@ -40,14 +40,5 @@
     "tsc-alias": "^1.9.11",
     "tsconfig-paths": "^4.2.0",
     "typescript": "~5.9.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "mongodb-memory-server"
-    ],
-    "ignoredBuiltDependencies": [
-      "@parcel/watcher",
-      "@scarf/scarf"
-    ]
   }
 }
