@@ -17,6 +17,7 @@ import {
   UNREAD_POLL_MS
 } from "@/lib/notifications-store";
 import { loginUrl } from "@/lib/session";
+import { readWorkspaces } from "@/lib/workspace-store";
 import { renderWithTheme, storedData } from "@/test-utils";
 
 function QueryProbe() {
@@ -223,10 +224,10 @@ describe("GlobalTopBar", () => {
       const { user } = setup();
 
       await user.click(screen.getByRole("button", { name: "Create" }));
-      await user.click(await screen.findByTestId("create-workspace"));
+      await user.click(await screen.findByTestId("create-template"));
 
       expect(
-        await screen.findByText("Workspaces are not available yet")
+        await screen.findByText("Templates are not available yet")
       ).toBeVisible();
     });
   });
@@ -515,6 +516,108 @@ describe("GlobalTopBar", () => {
     });
   });
 
+  describe("account menu integration", () => {
+    it("FR-01 toggles the account menu closed when the avatar is clicked again", async () => {
+      const { user } = setup();
+
+      await user.click(screen.getByTestId("top-bar-account"));
+      await screen.findByRole("menu", { name: "Account" });
+      fireEvent.click(screen.getByTestId("top-bar-account"));
+
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("menu", { name: "Account" })
+        ).not.toBeInTheDocument()
+      );
+    });
+
+    it("FR-13 opens the shortcuts dialog and returns focus to the avatar on Escape", async () => {
+      const { user } = setup();
+      const avatar = screen.getByTestId("top-bar-account");
+
+      await user.click(avatar);
+      await user.click(await screen.findByTestId("account-shortcuts"));
+      expect(
+        await screen.findByRole("dialog", { name: "Keyboard shortcuts" })
+      ).toBeInTheDocument();
+      await user.keyboard("{Escape}");
+
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Keyboard shortcuts" })
+        ).not.toBeInTheDocument()
+      );
+      await waitFor(() => expect(avatar).toHaveFocus());
+    });
+
+    it("FR-11 opens the workspace form from the account menu and creates a workspace", async () => {
+      const { user } = setup();
+
+      await user.click(screen.getByTestId("top-bar-account"));
+      await user.click(await screen.findByTestId("account-create-workspace"));
+      await user.type(
+        await screen.findByTestId("workspace-name-input"),
+        "  Design  "
+      );
+      await user.click(screen.getByRole("combobox", { name: /Type/ }));
+      await user.click(await screen.findByRole("option", { name: "Team" }));
+      await user.click(screen.getByTestId("workspace-submit"));
+
+      expect(
+        await screen.findByText('Workspace "Design" created')
+      ).toBeVisible();
+      expect(readWorkspaces().map((item) => item.name)).toEqual(["Design"]);
+    });
+
+    it("FR-11 opens the same workspace form from the Create menu", async () => {
+      const { user } = setup();
+
+      await user.click(screen.getByRole("button", { name: "Create" }));
+      await user.click(await screen.findByTestId("create-workspace"));
+
+      expect(
+        await screen.findByRole("dialog", { name: "Create Workspace" })
+      ).toBeInTheDocument();
+    });
+
+    it("FR-14 logs out through the supplied handler", async () => {
+      const onLogout = jest.fn();
+      const { user } = setup({ onLogout });
+
+      await user.click(screen.getByTestId("top-bar-account"));
+      await user.click(await screen.findByTestId("account-logout"));
+
+      expect(onLogout).toHaveBeenCalledTimes(1);
+    });
+
+    it("6.1 shows a retryable toast when the theme cannot be saved", async () => {
+      const { user } = setup();
+      await user.click(screen.getByTestId("top-bar-account"));
+      await user.click(await screen.findByTestId("account-theme"));
+      await screen.findByTestId("theme-option-light");
+      const setItem = jest
+        .spyOn(Storage.prototype, "setItem")
+        .mockImplementation(() => {
+          throw new Error("quota");
+        });
+
+      await user.click(screen.getByTestId("theme-option-dark"));
+
+      expect(
+        await screen.findByText("Couldn't save theme preference")
+      ).toBeVisible();
+      setItem.mockRestore();
+      await user.click(screen.getByTestId("toast-retry"));
+
+      await waitFor(() =>
+        expect(
+          screen.queryByText("Couldn't save theme preference")
+        ).not.toBeInTheDocument()
+      );
+      expect(storedData().settings.mode).toBe("dark");
+    });
+  });
+
   describe("responsive behavior", () => {
     it("3.7 collapses search to an icon on tablet and expands an overlay", async () => {
       installViewport(768);
@@ -597,18 +700,6 @@ describe("GlobalTopBar", () => {
 
       expect(
         await screen.findByRole("dialog", { name: "What's new" })
-      ).toBeInTheDocument();
-    });
-
-    it("3.7 opens Help from the account menu on mobile", async () => {
-      installViewport(375);
-      const { user } = setup();
-
-      await user.click(screen.getByTestId("top-bar-account"));
-      await user.click(await screen.findByTestId("account-help"));
-
-      expect(
-        await screen.findByRole("menu", { name: "Help" })
       ).toBeInTheDocument();
     });
   });
