@@ -303,6 +303,39 @@ function createBoard(name: string) {
   );
 }
 
+function createBoardWithBackground(name: string, backgroundId: string) {
+  return apply(
+    (data) => {
+      const created = ops.createBoard(data, name);
+      if (!created.ok || !created.id) return created;
+      const styled = ops.setBoardBackground(
+        created.data,
+        created.id,
+        backgroundId
+      );
+      if (!styled.ok) return styled;
+      const switched = ops.switchBoard(styled.data, created.id);
+      return switched.ok ? { ...switched, id: created.id } : switched;
+    },
+    { clearUndo: true }
+  );
+}
+
+function retryLoad(): boolean {
+  const result = readAppData();
+  if (result.status === "ok") {
+    setSnapshot({
+      data: result.data,
+      isReady: true,
+      saveError: null,
+      dataError: null,
+      notice: null
+    });
+    return true;
+  }
+  return false;
+}
+
 function importBoard(text: string) {
   return apply((data) => {
     const imported = importBoardText(data, text);
@@ -482,6 +515,8 @@ const actions = {
   createCardFromTemplate,
   deleteTemplate: onActive(ops.deleteTemplate),
   createBoard,
+  createBoardWithBackground,
+  retryLoad,
   renameBoard: (boardId: string, name: string) =>
     apply((data) => ops.renameBoard(data, boardId, name)),
   archiveBoard,

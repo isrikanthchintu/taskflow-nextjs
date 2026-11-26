@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 export const WORKSPACES_KEY = "taskflow.workspaces.v1";
 export const WORKSPACE_NAME_MAX = 100;
 export const WORKSPACE_TYPES = [
@@ -47,6 +49,38 @@ export function readWorkspaces(): Workspace[] {
   }
 }
 
+const NO_WORKSPACES: Workspace[] = [];
+const listeners = new Set<() => void>();
+let cachedRaw: string | null | undefined;
+let cachedList: Workspace[] = NO_WORKSPACES;
+
+export function getWorkspaces(): Workspace[] {
+  if (typeof window === "undefined") return NO_WORKSPACES;
+  const raw = window.localStorage.getItem(WORKSPACES_KEY);
+  if (raw !== cachedRaw) {
+    cachedRaw = raw;
+    const list = readWorkspaces();
+    cachedList = list.length === 0 ? NO_WORKSPACES : list;
+  }
+  return cachedList;
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === WORKSPACES_KEY) listener();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function useWorkspaces(): Workspace[] {
+  return useSyncExternalStore(subscribe, getWorkspaces, () => NO_WORKSPACES);
+}
+
 export function createWorkspace(input: WorkspaceInput): WorkspaceResult {
   const nameError = validateWorkspaceName(input.name);
   if (nameError) return { ok: false, field: "name", error: nameError };
@@ -83,5 +117,6 @@ export function createWorkspace(input: WorkspaceInput): WorkspaceResult {
       error: "The workspace could not be saved. Try again."
     };
   }
+  listeners.forEach((listener) => listener());
   return { ok: true, workspace };
 }
