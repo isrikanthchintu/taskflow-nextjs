@@ -36,7 +36,15 @@ export function ApiBoardLoader({ boardId }: { boardId: string }) {
       } catch (caught) {
         if (cancelled) return;
         if (caught instanceof ApiError && caught.status === 404) {
-          setState({ kind: "missing" });
+          const routeMissing = caught.message.startsWith("Cannot ");
+          setState(
+            routeMissing
+              ? {
+                  kind: "error",
+                  message: "The API server is out of date. Rebuild and restart the backend, then try again."
+                }
+              : { kind: "missing" }
+          );
           return;
         }
         setState({ kind: "error", message: errorMessage(caught) });
