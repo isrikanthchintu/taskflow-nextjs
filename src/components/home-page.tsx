@@ -431,7 +431,7 @@ export function HomePage() {
       </Drawer>
 
       <CreateBoardFlow
-        key={boardFlow.key}
+        key={`board-${boardFlow.key}`}
         open={boardFlow.open}
         defaultWorkspaceId={boardFlow.workspaceId}
         onClose={() => setBoardFlow((current) => ({ ...current, open: false }))}
@@ -441,7 +441,7 @@ export function HomePage() {
         onClose={() => setClosedOpen(false)}
       />
       <CreateWorkspaceDialog
-        key={workspaceKey}
+        key={`workspace-${workspaceKey}`}
         open={workspaceOpen}
         onClose={() => setWorkspaceOpen(false)}
       />
