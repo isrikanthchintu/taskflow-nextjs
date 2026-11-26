@@ -394,6 +394,55 @@ describe("useBoard", () => {
     expect(window.localStorage.getItem(DATA_KEY)).toBe("{broken");
   });
 
+  it("backs up the raw unreadable text without changing it", () => {
+    window.localStorage.setItem(DATA_KEY, "{broken");
+    const { result } = renderHook(() => useBoard());
+
+    const backup = result.current.backupSavedData();
+
+    expect(backup?.text).toBe("{broken");
+    expect(backup?.fileName).toMatch(
+      /^taskflow-backup-\d{4}-\d{2}-\d{2}\.json$/
+    );
+    expect(window.localStorage.getItem(DATA_KEY)).toBe("{broken");
+  });
+
+  it("resets unreadable newer-version data to a fresh board and saves again", () => {
+    window.localStorage.setItem(
+      DATA_KEY,
+      JSON.stringify({ ...createDefaultData(), version: 99 })
+    );
+    const { result } = renderHook(() => useBoard());
+    expect(result.current.dataError).toMatch(/newer version/);
+
+    let outcome = false;
+    act(() => {
+      outcome = result.current.resetSavedData().ok;
+    });
+    expect(outcome).toBe(true);
+    expect(result.current.dataError).toBeNull();
+
+    act(() => {
+      result.current.addList("After reset");
+    });
+    expect(
+      stored().boards[0].lists.some((list) => list.name === "After reset")
+    ).toBe(true);
+  });
+
+  it("refuses to reset when the saved data is readable", () => {
+    seedStorage(["Keep me"]);
+    const { result } = renderHook(() => useBoard());
+
+    let outcome = true;
+    act(() => {
+      outcome = result.current.resetSavedData().ok;
+    });
+
+    expect(outcome).toBe(false);
+    expect(stored().boards[0].cards[0].title).toBe("Keep me");
+  });
+
   it("FR11.1 a rule runs after a user action", () => {
     seedStorage(["a"]);
     const { result } = renderHook(() => useBoard());

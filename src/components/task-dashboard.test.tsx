@@ -200,16 +200,34 @@ describe("TaskDashboard", () => {
     expect(pillValue("In progress")).toBe("1");
   });
 
-  it("FR1.3 shows the unreadable-data message with no extra buttons and leaves the data untouched", async () => {
+  it("FR1.3 shows the unreadable-data message and leaves the data untouched", async () => {
     window.localStorage.setItem(DATA_KEY, "{not json");
 
     await renderReadyDashboard();
 
     const banner = screen.getByTestId("banner-data-error");
     expect(banner).toHaveTextContent("Your saved data could not be read");
-    expect(within(banner).queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /new task/i })).toBeDisabled();
     expect(window.localStorage.getItem(DATA_KEY)).toBe("{not json");
+  });
+
+  it("recovers from data written by a newer version after a confirmed reset", async () => {
+    const newer = { ...createDefaultData(), version: 99 };
+    window.localStorage.setItem(DATA_KEY, JSON.stringify(newer));
+
+    const user = await renderReadyDashboard();
+
+    expect(screen.getByTestId("banner-data-error")).toHaveTextContent(
+      "written by a newer version"
+    );
+    await user.click(screen.getByRole("button", { name: "Reset saved data" }));
+    await user.click(screen.getByTestId("confirm-accept"));
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("banner-data-error")).not.toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: /new task/i })).toBeEnabled();
+    expect(storedData().version).toBe(2);
   });
 
   it("FR1.5 warns in words when 90 percent of the card limit is in use", async () => {

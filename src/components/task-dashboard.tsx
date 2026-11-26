@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { Box, Drawer, Typography } from "@mui/material";
+import { BannerStack } from "@/components/banner-stack";
 import { BoardsMenu } from "@/components/boards-menu";
 import { CardDialog } from "@/components/card-dialog";
 import { CommandMenu, type Command } from "@/components/command-menu";
@@ -56,7 +57,9 @@ export function TaskDashboard() {
     undoEntry,
     undo,
     dismissNotice,
-    dismissSaveError
+    dismissSaveError,
+    backupSavedData,
+    resetSavedData
   } = useBoard();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<BoardView>(EMPTY_VIEW);
@@ -91,6 +94,7 @@ export function TaskDashboard() {
     data.settings.customBackgroundStart,
     data.settings.customBackgroundEnd
   );
+  const limits = useMemo(() => checkLimits(data), [data]);
   const canAdd = !dataError && lists.length > 0;
   const filtering = viewActiveCount(view) > 0 || query.trim() !== "";
 
@@ -273,6 +277,17 @@ export function TaskDashboard() {
           />
         }
         onOpenSettings={() => setSettingsOpen(true)}
+      />
+
+      <BannerStack
+        dataError={dataError}
+        saveError={saveError}
+        notice={notice}
+        limits={limits}
+        onDismissSaveError={dismissSaveError}
+        onDismissNotice={dismissNotice}
+        onBackupData={backupSavedData}
+        onResetData={resetSavedData}
       />
 
       <Box
