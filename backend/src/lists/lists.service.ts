@@ -7,9 +7,11 @@ import { ActivityService } from "@/activity/activity.service";
 import { AuthUser } from "@/auth/auth.guard";
 import { AppEnv } from "@/config/env";
 import { conflict, notFound, validationError } from "@/common/errors";
+import { assertExtra } from "@/common/extra";
 import { oid } from "@/common/object-id";
 import { evenlySpacedPositions, isValidPosition, needsRebalance, positionAfter } from "@/common/position";
-import { Card } from "@/database/schemas/card.schema";
+import { CardsService } from "@/cards/cards.service";
+import { Card, CardDocument } from "@/database/schemas/card.schema";
 import { BoardList, BoardListDocument } from "@/database/schemas/list.schema";
 import { TransactionService } from "@/database/transaction.service";
 import { CreateListDto, MoveListDto, UpdateListDto } from "@/lists/lists.dto";
@@ -22,7 +24,8 @@ export class ListsService {
     private readonly access: AccessService,
     private readonly activity: ActivityService,
     private readonly transactions: TransactionService,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
+    private readonly cardsService: CardsService
   ) {}
 
   private view(list: BoardListDocument) {
@@ -32,6 +35,7 @@ export class ListsService {
       name: list.name,
       position: list.position,
       isArchived: list.isArchived,
+      extra: list.extra ?? {},
       createdAt: (list as unknown as { createdAt: Date }).createdAt.toISOString(),
       updatedAt: (list as unknown as { updatedAt: Date }).updatedAt.toISOString()
     };
@@ -58,12 +62,21 @@ export class ListsService {
     if (dto.position !== undefined) {
       this.assertPosition(dto.position);
     }
+    assertExtra(dto.extra);
     const list = await this.transactions.run(async (session) => {
       const last = await this.lists
         .findOne({ boardId: board._id }, "position", { session })
         .sort({ position: -1 });
       const [doc] = await this.lists.create(
-        [{ boardId: board._id, name: dto.name, position: dto.position ?? positionAfter(last?.position ?? null) }],
+        [
+          {
+            ...(dto.id ? { _id: oid(dto.id) } : {}),
+            boardId: board._id,
+            name: dto.name,
+            position: dto.position ?? positionAfter(last?.position ?? null),
+            extra: dto.extra ?? {}
+          }
+        ],
         { session }
       );
       await this.activity.record(session, {
@@ -86,6 +99,7 @@ export class ListsService {
   async update(user: AuthUser, id: string, dto: UpdateListDto) {
     const userId = oid(user.id);
     const list = await this.load(id, userId, "edit");
+    assertExtra(dto.extra);
     const previousName = list.name;
     const updated = await this.transactions.run(async (session) => {
       const doc = await this.lists.findByIdAndUpdate(list._id, { $set: dto }, { new: true, session });
@@ -101,11 +115,19 @@ export class ListsService {
   }
 
   async remove(user: AuthUser, id: string): Promise<void> {
-    const list = await this.load(id, oid(user.id), "edit");
-    if (await this.cards.exists({ listId: list._id })) {
+    const userId = oid(user.id);
+    const list = await this.load(id, userId, "edit");
+    const hasCards = await this.cards.exists({ listId: list._id });
+    if (hasCards && !list.isArchived) {
       throw conflict("LIST_NOT_EMPTY", "Move or delete the cards in this list, or archive the list instead.");
     }
-    await this.lists.deleteOne({ _id: list._id });
+    await this.transactions.run(async (session) => {
+      const cards = (await this.cards.find({ listId: list._id }, null, { session })) as CardDocument[];
+      for (const card of cards) {
+        await this.cardsService.deleteWithin(session, card, userId);
+      }
+      await this.lists.deleteOne({ _id: list._id }, { session });
+    });
   }
 
   private async rebalance(boardId: Types.ObjectId, session: ClientSession): Promise<void> {

@@ -5,6 +5,7 @@ import { AccessService, roleAllows } from "@/access/access.service";
 import { ActivityService } from "@/activity/activity.service";
 import { AuthUser } from "@/auth/auth.guard";
 import { conflict, notFound, validationError } from "@/common/errors";
+import { assertExtra } from "@/common/extra";
 import { oid } from "@/common/object-id";
 import { Activity, Notification, OutboxEvent } from "@/database/schemas/activity.schema";
 import {
@@ -223,8 +224,40 @@ export class BoardsService {
     };
   }
 
+  async snapshot(user: AuthUser, id: string) {
+    const { board, role } = await this.access.requireBoard(oid(user.id), oid(id), "read");
+    const [lists, cards] = await Promise.all([
+      this.lists.find({ boardId: board._id }).sort({ position: 1, _id: 1 }).lean(),
+      this.cards.find({ boardId: board._id }).sort({ position: 1, _id: 1 }).lean()
+    ]);
+    return {
+      ...this.summary(board, role),
+      extra: board.extra ?? {},
+      lists: lists.map((list) => ({
+        id: String(list._id),
+        name: list.name,
+        position: list.position,
+        isArchived: list.isArchived,
+        extra: list.extra ?? {}
+      })),
+      cards: cards.map((card) => ({
+        id: String(card._id),
+        listId: String(card.listId),
+        title: card.title,
+        description: card.description,
+        position: card.position,
+        dueAt: iso(card.dueAt),
+        isArchived: card.isArchived,
+        extra: card.extra ?? {},
+        version: card.version,
+        createdAt: iso((card as unknown as { createdAt: Date }).createdAt)
+      }))
+    };
+  }
+
   async update(user: AuthUser, id: string, dto: UpdateBoardDto) {
     const userId = oid(user.id);
+    assertExtra(dto.extra);
     const permission = dto.visibility !== undefined ? "admin" : "edit";
     const { board } = await this.access.requireBoard(userId, oid(id), permission);
     const changes: Record<string, unknown> = {};

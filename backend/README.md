@@ -32,6 +32,10 @@ Tests use `MONGO_TEST_URI` if set (a replica set you control), otherwise start a
 
 Auth (register, login, `/me`), workspaces and members, boards (CRUD, close/reopen, star, views, recent, starred, copy, members, activity), lists, cards (CRUD, move with `expectedVersion`, complete, archive/restore, members, watchers, activity), fractional position keys with rebalance, rich-text sanitizer, transactional activity + outbox + notification fan-out, structured errors.
 
+## Board UI support
+
+Boards, lists and cards accept an optional `extra` JSON object (max 256 KB) that stores UI-specific data the relational model does not cover yet (priority, checklists, label ids, rules, templates, list limits). Lists and cards also accept a client-generated `id` (24-char hex), and `GET /boards/:id/snapshot` returns the whole board including archived lists and cards. The frontend uses these to run the original board UI on the API.
+
 ## Follow-up work (rest of TICKET-004)
 
 Labels, checklists, attachments (storage + signature checks), comments and reactions, notifications and preferences endpoints, search, realtime publisher (outbox consumer), board watchers, mentions.

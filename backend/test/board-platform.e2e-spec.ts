@@ -142,6 +142,68 @@ describe("Board platform API", () => {
     await api.get(`/api/v1/boards/${boardId}`).set(auth(owner.token)).expect(404);
   });
 
+  it("supports client ids, extra data, snapshots and cascading list delete", async () => {
+    const user = await register("snapshot@example.com", "Snap");
+    const ws = await api.post("/api/v1/workspaces").set(auth(user.token)).send({ name: "S" }).expect(201);
+    const board = await api.post("/api/v1/boards").set(auth(user.token)).send({ workspaceId: ws.body.id, name: "Snap" }).expect(201);
+    const boardId = board.body.id as string;
+
+    await api
+      .patch(`/api/v1/boards/${boardId}`)
+      .set(auth(user.token))
+      .send({ extra: { rules: [{ id: "r1" }], labels: [{ id: "l1", name: "Bug" }] } })
+      .expect(200);
+
+    const listId = new Types.ObjectId().toHexString();
+    const created = await api
+      .post(`/api/v1/boards/${boardId}/lists`)
+      .set(auth(user.token))
+      .send({ id: listId, name: "Todo", extra: { done: false, limit: 3 } })
+      .expect(201);
+    expect(created.body.id).toBe(listId);
+
+    const dup = await api.post(`/api/v1/boards/${boardId}/lists`).set(auth(user.token)).send({ id: listId, name: "Again" }).expect(409);
+    expect(dup.body.error.code).toBe("DUPLICATE");
+
+    await api.post(`/api/v1/boards/${boardId}/lists`).set(auth(user.token)).send({ id: "nope", name: "Bad" }).expect(400);
+
+    const cardId = new Types.ObjectId().toHexString();
+    await api
+      .post(`/api/v1/boards/${boardId}/cards`)
+      .set(auth(user.token))
+      .send({
+        id: cardId,
+        listId,
+        title: "Card",
+        dueAt: "2026-12-01T00:00:00.000Z",
+        extra: { priority: "high", labelIds: ["l1"], checklists: [{ id: "c1", title: "T", items: [] }] }
+      })
+      .expect(201);
+
+    await api.patch(`/api/v1/cards/${cardId}`).set(auth(user.token)).send({ extra: { priority: "low" } }).expect(200);
+    await api.post(`/api/v1/cards/${cardId}/archive`).set(auth(user.token)).expect(200);
+    await api.post(`/api/v1/lists/${listId}/archive`).set(auth(user.token)).expect(200);
+
+    const snapshot = await api.get(`/api/v1/boards/${boardId}/snapshot`).set(auth(user.token)).expect(200);
+    expect(snapshot.body.extra.rules).toHaveLength(1);
+    expect(snapshot.body.lists[0].extra).toEqual({ done: false, limit: 3 });
+    expect(snapshot.body.lists[0].isArchived).toBe(true);
+    expect(snapshot.body.cards).toHaveLength(1);
+    expect(snapshot.body.cards[0].isArchived).toBe(true);
+    expect(snapshot.body.cards[0].extra).toEqual({ priority: "low" });
+    expect(snapshot.body.cards[0].dueAt).toBe("2026-12-01T00:00:00.000Z");
+
+    await api.patch(`/api/v1/cards/${cardId}`).set(auth(user.token)).send({ extra: [] }).expect(400);
+
+    const outsider = await register("snapout@example.com", "Out");
+    await api.get(`/api/v1/boards/${boardId}/snapshot`).set(auth(outsider.token)).expect(404);
+
+    await api.delete(`/api/v1/lists/${listId}`).set(auth(user.token)).expect(204);
+    const after = await api.get(`/api/v1/boards/${boardId}/snapshot`).set(auth(user.token)).expect(200);
+    expect(after.body.lists).toHaveLength(0);
+    expect(after.body.cards).toHaveLength(0);
+  });
+
   it("rolls back the mutation when activity persistence fails", async () => {
     const user = await register("rollback@example.com", "Rollback");
     const ws = await api.post("/api/v1/workspaces").set(auth(user.token)).send({ name: "RB" }).expect(201);

@@ -1,4 +1,4 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsIn, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength } from "class-validator";
 import { BOARD_ROLES, BOARD_VISIBILITIES, BoardRole, BoardVisibility } from "@/database/schemas/board.schema";
 
 export class CreateBoardDto {
@@ -36,6 +36,10 @@ export class UpdateBoardDto {
   @IsOptional()
   @IsIn(BOARD_VISIBILITIES)
   visibility?: BoardVisibility;
+
+  @IsOptional()
+  @IsObject()
+  extra?: Record<string, unknown>;
 }
 
 export class CopyBoardDto {

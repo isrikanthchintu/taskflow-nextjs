@@ -3,7 +3,9 @@ import {
   IsBoolean,
   IsDate,
   IsInt,
+  IsMongoId,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   MaxLength,
@@ -11,6 +13,10 @@ import {
 } from "class-validator";
 
 export class CreateCardDto {
+  @IsOptional()
+  @IsMongoId()
+  id?: string;
+
   @IsString()
   @IsNotEmpty()
   listId: string;
@@ -28,6 +34,15 @@ export class CreateCardDto {
   @IsOptional()
   @IsString()
   position?: string;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  dueAt?: Date | null;
+
+  @IsOptional()
+  @IsObject()
+  extra?: Record<string, unknown>;
 }
 
 export class UpdateCardDto {
@@ -55,6 +70,10 @@ export class UpdateCardDto {
   @IsOptional()
   @IsBoolean()
   dueComplete?: boolean;
+
+  @IsOptional()
+  @IsObject()
+  extra?: Record<string, unknown>;
 
   @IsOptional()
   @IsInt()

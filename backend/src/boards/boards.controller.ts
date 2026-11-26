@@ -47,6 +47,11 @@ export class BoardsController {
     return this.boards.get(user, id);
   }
 
+  @Get("boards/:id/snapshot")
+  snapshot(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.boards.snapshot(user, id);
+  }
+
   @Patch("boards/:id")
   update(@CurrentUser() user: AuthUser, @Param("id") id: string, @Body() dto: UpdateBoardDto) {
     return this.boards.update(user, id, dto);

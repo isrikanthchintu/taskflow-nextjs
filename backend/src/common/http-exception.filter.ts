@@ -41,6 +41,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
 
+    if ((exception as { code?: number } | null)?.code === 11000) {
+      response.status(409).json({
+        error: { code: "DUPLICATE", message: "A resource with this identifier already exists.", fields: [] }
+      });
+      return;
+    }
+
     this.logger.error(exception instanceof Error ? (exception.stack ?? exception.message) : String(exception));
     response.status(500).json({
       error: { code: "INTERNAL_SERVER_ERROR", message: "An unexpected error occurred.", fields: [] }

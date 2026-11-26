@@ -26,6 +26,9 @@ export class Board {
 
   @Prop({ type: Types.ObjectId, ref: "User", required: true })
   createdBy: Types.ObjectId;
+
+  @Prop({ type: Object, default: {} })
+  extra: Record<string, unknown>;
 }
 export type BoardDocument = HydratedDocument<Board>;
 export const BoardSchema = SchemaFactory.createForClass(Board);
