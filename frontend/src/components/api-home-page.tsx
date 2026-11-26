@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
 import { boardPath } from "@/lib/home-model";
+import { DEFAULT_BACKGROUND_ID, getBackground } from "@/lib/theme-presets";
 
 interface WorkspaceBoards {
   workspace: ApiWorkspace;
@@ -40,7 +41,7 @@ function NewBoardForm({ workspaceId, onCreated }: { workspaceId: string; onCreat
     event.preventDefault();
     setError(null);
     try {
-      await api.createBoard({ workspaceId, name, visibility });
+      await api.createBoard({ workspaceId, name, visibility, background: DEFAULT_BACKGROUND_ID });
       setName("");
       onCreated();
     } catch (caught) {
@@ -102,7 +103,7 @@ function BoardTile({
       <CardActionArea
         component={NextLink}
         href={boardPath({ id: board.id, name: board.name })}
-        sx={{ p: 2, minHeight: 80, bgcolor: board.background, color: "#fff" }}
+        sx={{ p: 2, minHeight: 80, background: getBackground(board.background).css, color: "#fff" }}
       >
         <Typography sx={{ fontWeight: 700 }}>{board.name}</Typography>
         <Typography variant="caption">{board.visibility}</Typography>

@@ -22,6 +22,8 @@ backend/    NestJS + MongoDB REST API (see backend/README.md)
 
 Run all frontend commands from the `frontend/` folder.
 
+Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` (see `frontend/.env.example`) to use the API: you sign in, manage workspaces and boards on the home page, and the board page is the same UI as local mode, saved to the backend. Without it the app uses browser localStorage only.
+
 ## Requirements
 
 - Node.js 20.9 or later

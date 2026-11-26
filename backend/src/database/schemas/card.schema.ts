@@ -47,6 +47,9 @@ export class Card {
 
   @Prop({ required: true, default: 1 })
   version: number;
+
+  @Prop({ type: Object, default: {} })
+  extra: Record<string, unknown>;
 }
 export type CardDocument = HydratedDocument<Card>;
 export const CardSchema = SchemaFactory.createForClass(Card);

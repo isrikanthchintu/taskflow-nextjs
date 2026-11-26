@@ -14,6 +14,9 @@ export class BoardList {
 
   @Prop({ default: false })
   isArchived: boolean;
+
+  @Prop({ type: Object, default: {} })
+  extra: Record<string, unknown>;
 }
 export type BoardListDocument = HydratedDocument<BoardList>;
 export const BoardListSchema = SchemaFactory.createForClass(BoardList);

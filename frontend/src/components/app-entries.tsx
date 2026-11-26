@@ -1,6 +1,6 @@
 "use client";
 
-import { ApiBoardPage } from "@/components/api-board-page";
+import { ApiBoardLoader } from "@/components/api-board-loader";
 import { ApiGate } from "@/components/api-gate";
 import { ApiHomePage } from "@/components/api-home-page";
 import { BoardPage } from "@/components/board-page";
@@ -20,7 +20,7 @@ export function BoardEntry({ boardId }: { boardId: string }) {
   if (!isApiConfigured()) return <BoardPage boardId={boardId} />;
   return (
     <ApiGate>
-      <ApiBoardPage boardId={boardId} />
+      <ApiBoardLoader boardId={boardId} />
     </ApiGate>
   );
 }

@@ -7,6 +7,7 @@ import { ActivityService } from "@/activity/activity.service";
 import { AuthUser } from "@/auth/auth.guard";
 import { CardUserDto, CreateCardDto, MoveCardDto, UpdateCardDto } from "@/cards/cards.dto";
 import { conflict, notFound, validationError } from "@/common/errors";
+import { assertExtra } from "@/common/extra";
 import { oid } from "@/common/object-id";
 import { evenlySpacedPositions, isValidPosition, needsRebalance, positionAfter } from "@/common/position";
 import { sanitizeRichText } from "@/common/sanitize";
@@ -60,6 +61,7 @@ export class CardsService {
       title: card.title,
       description: card.description,
       position: card.position,
+      extra: card.extra ?? {},
       version: card.version,
       isComplete: card.isComplete,
       completedAt: iso(card.completedAt),
@@ -107,6 +109,7 @@ export class CardsService {
     if (dto.position !== undefined) {
       this.assertPosition(dto.position);
     }
+    assertExtra(dto.extra);
     const card = await this.transactions.run(async (session) => {
       const list = await this.activeList(oid(dto.listId), board._id, session);
       const last = await this.cards
@@ -115,8 +118,11 @@ export class CardsService {
       const [doc] = await this.cards.create(
         [
           {
+            ...(dto.id ? { _id: oid(dto.id) } : {}),
             boardId: board._id,
             listId: list._id,
+            dueAt: dto.dueAt ?? null,
+            extra: dto.extra ?? {},
             title: dto.title,
             description: sanitizeRichText(dto.description ?? ""),
             position: dto.position ?? positionAfter(last?.position ?? null),
@@ -176,12 +182,14 @@ export class CardsService {
   async update(user: AuthUser, id: string, dto: UpdateCardDto) {
     const userId = oid(user.id);
     const card = await this.load(id, userId, "edit");
+    assertExtra(dto.extra);
     const set: Record<string, unknown> = {};
     if (dto.title !== undefined) set.title = dto.title;
     if (dto.description !== undefined) set.description = sanitizeRichText(dto.description);
     if (dto.startAt !== undefined) set.startAt = dto.startAt;
     if (dto.dueAt !== undefined) set.dueAt = dto.dueAt;
     if (dto.dueComplete !== undefined) set.dueComplete = dto.dueComplete;
+    if (dto.extra !== undefined) set.extra = dto.extra;
 
     const dueChanged = dto.dueAt !== undefined && iso(dto.dueAt) !== iso(card.dueAt);
     const filter: Record<string, unknown> = { _id: card._id };
@@ -213,7 +221,11 @@ export class CardsService {
   async remove(user: AuthUser, id: string): Promise<void> {
     const userId = oid(user.id);
     const card = await this.load(id, userId, "edit");
-    await this.transactions.run(async (session) => {
+    await this.transactions.run((session) => this.deleteWithin(session, card, userId));
+  }
+
+  async deleteWithin(session: ClientSession, card: CardDocument, userId: Types.ObjectId): Promise<void> {
+    {
       const checklistIds = (await this.checklists.find({ cardId: card._id }, "_id", { session }).lean()).map((c) => c._id);
       const commentIds = (await this.comments.find({ cardId: card._id }, "_id", { session }).lean()).map((c) => c._id);
       await this.reactions.deleteMany({ commentId: { $in: commentIds } }, { session });
@@ -235,7 +247,7 @@ export class CardsService {
       await this.cardMembers.deleteMany({ cardId: card._id }, { session });
       await this.cardWatchers.deleteMany({ cardId: card._id }, { session });
       await this.cards.deleteOne({ _id: card._id }, { session });
-    });
+    }
   }
 
   private async rebalance(listId: Types.ObjectId, session: ClientSession): Promise<void> {

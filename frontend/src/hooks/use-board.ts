@@ -21,6 +21,8 @@ import {
   exportFileName,
   importBoard as importBoardText
 } from "@/lib/board-transfer";
+import type { BoardSyncer } from "@/lib/api/board-sync";
+import { writeRemoteSettings } from "@/lib/api/remote-settings";
 import type { AppData, Board, Card, Settings } from "@/types/board";
 
 export const UNDO_MS = 10000;
@@ -61,6 +63,12 @@ const emptySnapshot: BoardState = {
   undoEntry: null
 };
 
+interface RemoteSession {
+  boardId: string;
+  syncer: BoardSyncer;
+}
+
+let remote: RemoteSession | null = null;
 let snapshot: BoardState = emptySnapshot;
 let loadStarted = false;
 let undoRestore: Restore | null = null;
@@ -88,6 +96,26 @@ function describeWrite(result: WriteResult): string | null {
   if (result === "blocked")
     return "Saved data could not be read, so nothing is saved. Your stored data is untouched.";
   return "Browser storage is unavailable. This change was not saved. Your earlier saved data is intact.";
+}
+
+const REMOTE_BLOCKED =
+  "Creating or switching boards is not available here. Use the home page.";
+
+function persist(data: AppData): string | null {
+  if (remote) {
+    writeRemoteSettings(data.settings);
+    const board = data.boards.find((item) => item.id === remote?.boardId);
+    if (board) remote.syncer.push(board);
+    return null;
+  }
+  return describeWrite(writeAppData(data));
+}
+
+function leavesRemoteBoard(before: AppData, after: AppData): boolean {
+  if (!remote) return false;
+  if (after.activeBoardId !== before.activeBoardId) return true;
+  if (after.boards.length !== before.boards.length) return true;
+  return after.boards.some((board, index) => board.id !== before.boards[index].id);
 }
 
 function clearUndoTimer() {
@@ -131,7 +159,9 @@ function apply(
   const event = options.event?.(result.id, before, next) ?? null;
   if (event) next = runRules(next, before.activeBoardId, event).data;
 
-  const saveError = describeWrite(writeAppData(next));
+  if (leavesRemoteBoard(before, next)) return failure(REMOTE_BLOCKED);
+
+  const saveError = persist(next);
   const undoChanges: Partial<BoardState> = options.undo
     ? { undoEntry: startUndo(options.undo.message, options.undo.restore) }
     : options.clearUndo
@@ -322,6 +352,7 @@ function createBoardWithBackground(name: string, backgroundId: string) {
 }
 
 function retryLoad(): boolean {
+  if (remote) return false;
   const result = readAppData();
   if (result.status === "ok") {
     setSnapshot({
@@ -369,7 +400,11 @@ function undo(): ops.OpResult {
     setSnapshot(dropUndo());
     return result;
   }
-  const saveError = describeWrite(writeAppData(result.data));
+  if (leavesRemoteBoard(snapshot.data, result.data)) {
+    setSnapshot(dropUndo());
+    return failure(REMOTE_BLOCKED);
+  }
+  const saveError = persist(result.data);
   setSnapshot({ data: result.data, saveError, notice: null, ...dropUndo() });
   return result;
 }
@@ -390,6 +425,7 @@ function backupSavedData(): { fileName: string; text: string } | null {
 }
 
 function resetSavedData(): ops.OpResult {
+  if (remote) return failure("Saved data cannot be reset while connected to the API.");
   if (!snapshot.dataError) return failure("Your saved data is readable.");
   if (!clearSavedData())
     return failure("Browser storage could not be cleared.");
@@ -409,7 +445,43 @@ function unreadableMessage(reason: string): string {
   return `Your saved data could not be read, so nothing will be saved until it is fixed. ${reason}`;
 }
 
+export function attachRemoteBoard(input: {
+  board: Board;
+  syncer: BoardSyncer;
+  settings: Settings;
+}): void {
+  remote = { boardId: input.board.id, syncer: input.syncer };
+  loadStarted = true;
+  setSnapshot({
+    data: {
+      version: 2,
+      activeBoardId: input.board.id,
+      boards: [input.board],
+      settings: input.settings
+    },
+    isReady: true,
+    saveError: null,
+    dataError: null,
+    notice: null,
+    ...dropUndo()
+  });
+}
+
+export function detachRemoteBoard(): void {
+  if (!remote) return;
+  remote = null;
+  loadStarted = false;
+  snapshot = emptySnapshot;
+  emit();
+}
+
+export function setRemoteSaveError(error: string | null): void {
+  if (!remote) return;
+  if (snapshot.saveError !== error) setSnapshot({ saveError: error });
+}
+
 function loadOnce() {
+  if (remote) return;
   if (loadStarted) return;
   loadStarted = true;
   const result = readAppData();
@@ -441,6 +513,7 @@ function loadOnce() {
 }
 
 function onStorage(event: StorageEvent) {
+  if (remote) return;
   if (!snapshot.isReady) return;
   if (event.key !== null && event.key !== DATA_KEY) return;
   const result = readAppData();
@@ -468,8 +541,10 @@ function subscribe(listener: () => void) {
         window.removeEventListener("storage", onStorage);
       clearUndoTimer();
       undoRestore = null;
-      loadStarted = false;
-      snapshot = emptySnapshot;
+      if (!remote) {
+        loadStarted = false;
+        snapshot = emptySnapshot;
+      }
     }
   };
 }
